@@ -1,0 +1,25 @@
+{
+  "name": "purescript-encode-decode",
+  "version": "0.1.0",
+  "description": "Independent encode/decode functions instead of a bidirectional Codec - compose the decode half with a plain Functor, no profunctor needed.",
+  "main": "index.js",
+  "scripts": {
+    "test": "spago test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/m-bock/purescript-encode-decode.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/m-bock/purescript-encode-decode/issues"
+  },
+  "homepage": "https://github.com/m-bock/purescript-encode-decode#readme",
+  "devDependencies": {
+    "purescript": "^0.15.15",
+    "purs-tidy": "^0.11.0",
+    "spago": "^0.93.44"
+  }
+}

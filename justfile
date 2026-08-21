@@ -1,0 +1,11 @@
+export PATH := justfile_directory() / "node_modules/.bin:" + env_var('PATH')
+set shell := ["bash", "-c"]
+
+build:
+    spago build
+
+test:
+    spago test
+
+format:
+    purs-tidy format-in-place 'src/**/*.purs' 'test/**/*.purs'
