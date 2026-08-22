@@ -8,6 +8,7 @@ module Data.Json.Decode
   , decodeInt
   , decodeBoolean
   , decodeArray
+  , decodeObject
   , decodeNativeTuple2
   ) where
 
@@ -16,6 +17,7 @@ import Data.Argonaut.Decode.Decoders as Decoders
 import Data.Argonaut.Decode.Error (JsonDecodeError(..), printJsonDecodeError)
 import Data.Either (Either)
 import Data.Tuple.Nested (type (/\))
+import Foreign.Object (Object)
 
 ----------------------------------------------------------------------------------------------------
 -- Primitives
@@ -44,6 +46,17 @@ decodeBoolean = Decoders.decodeBoolean
 -- | Decode a JSON array, applying one decoder to every element.
 decodeArray :: forall a. (Json -> Either JsonDecodeError a) -> Json -> Either JsonDecodeError (Array a)
 decodeArray = Decoders.decodeArray
+
+----------------------------------------------------------------------------------------------------
+-- Object
+----------------------------------------------------------------------------------------------------
+
+-- | Decode a JSON object, applying one decoder to every value (keys stay
+-- | as-is) - unlike `Data.Json.Decode.Record`, this is for an object
+-- | whose *set* of keys isn't known ahead of time. Pass `Right` to get
+-- | the raw, undecoded `Object Json` back.
+decodeObject :: forall a. (Json -> Either JsonDecodeError a) -> Json -> Either JsonDecodeError (Object a)
+decodeObject = Decoders.decodeForeignObject
 
 ----------------------------------------------------------------------------------------------------
 -- Tuple

@@ -1,18 +1,20 @@
 -- | Encode functions for JSON primitives, arrays, and 2-tuples - see
--- | `Data.Json.Decode` for the other direction, `Data.Json.Record` for
--- | the one thing in this library that isn't trivial.
+-- | `Data.Json.Decode` for the other direction, `Data.Json.Encode.Record`
+-- | for the one thing in this library that isn't trivial.
 module Data.Json.Encode
   ( encodeString
   , encodeNumber
   , encodeInt
   , encodeBoolean
   , encodeArray
+  , encodeObject
   , encodeNativeTuple2
   ) where
 
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Encode.Encoders as Encoders
 import Data.Tuple.Nested (type (/\))
+import Foreign.Object (Object)
 
 ----------------------------------------------------------------------------------------------------
 -- Primitives
@@ -41,6 +43,15 @@ encodeBoolean = Encoders.encodeBoolean
 -- | Encode an `Array a` as a JSON array, applying one encoder to every element.
 encodeArray :: forall a. (a -> Json) -> Array a -> Json
 encodeArray = Encoders.encodeArray
+
+----------------------------------------------------------------------------------------------------
+-- Object
+----------------------------------------------------------------------------------------------------
+
+-- | Encode an `Object a` as a JSON object, applying one encoder to every
+-- | value (keys stay as-is).
+encodeObject :: forall a. (a -> Json) -> Object a -> Json
+encodeObject = Encoders.encodeForeignObject
 
 ----------------------------------------------------------------------------------------------------
 -- Tuple

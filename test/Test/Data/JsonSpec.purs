@@ -4,9 +4,10 @@ import Prelude
 
 import Data.Argonaut.Core (fromBoolean, fromNumber)
 import Data.Either (Either(..), isLeft)
-import Data.Json.Decode (decodeBoolean, decodeInt, decodeNumber, decodeString, decodeArray, decodeNativeTuple2)
-import Data.Json.Encode (encodeInt, encodeString, encodeArray, encodeNativeTuple2)
+import Data.Json.Decode (decodeBoolean, decodeInt, decodeNumber, decodeString, decodeArray, decodeObject, decodeNativeTuple2)
+import Data.Json.Encode (encodeInt, encodeString, encodeArray, encodeObject, encodeNativeTuple2)
 import Data.Tuple.Nested ((/\))
+import Foreign.Object as Object
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual, shouldSatisfy)
 
@@ -30,6 +31,11 @@ spec = do
     describe "array" do
       it "round-trips an array" do
         decodeArray decodeInt (encodeArray encodeInt [ 1, 2, 3 ]) `shouldEqual` Right [ 1, 2, 3 ]
+
+    describe "object" do
+      it "round-trips an object, keys unchanged" do
+        let value = Object.fromFoldable [ "a" /\ 1, "b" /\ 2 ]
+        decodeObject decodeInt (encodeObject encodeInt value) `shouldEqual` Right value
 
     describe "tuple" do
       it "round-trips a 2-tuple as a JSON array" do
