@@ -1,8 +1,11 @@
--- | Decode functions for JSON primitives, arrays, and 2-tuples - see
--- | `Data.Json.Encode` for the other direction, `Data.Json.Decode.Record`
--- | for the one thing in this library that isn't trivial.
+-- | Decode functions for JSON primitives, arrays, and 2-tuples, plus the
+-- | `Json` type and `jsonParser` themselves - so a consumer never needs
+-- | its own `import Data.Argonaut.*` line. See `Data.Json.Encode` for the
+-- | other direction, `Data.Json.Decode.Record` for the one thing in this
+-- | library that isn't trivial.
 module Data.Json.Decode
   ( module Data.Argonaut.Decode.Error
+  , Json
   , decodeString
   , decodeNumber
   , decodeInt
@@ -10,14 +13,24 @@ module Data.Json.Decode
   , decodeArray
   , decodeObject
   , decodeNativeTuple2
+  , jsonParser
   ) where
 
-import Data.Argonaut.Core (Json)
+import Data.Argonaut.Core as Argonaut
 import Data.Argonaut.Decode.Decoders as Decoders
 import Data.Argonaut.Decode.Error (JsonDecodeError(..), printJsonDecodeError)
+import Data.Argonaut.Parser (jsonParser) as Parser
 import Data.Either (Either)
 import Data.Tuple.Nested (type (/\))
 import Foreign.Object (Object)
+
+-- | Naming an imported type directly in an export list doesn't re-export
+-- | it in PureScript (only `module X` does, which would re-export all of
+-- | `Data.Argonaut.Core`, not just this one type) - a local alias is the
+-- | workaround. Transparent: a `Json` here and one from `Data.Argonaut.
+-- | Core` (or `Data.Json.Encode`'s own alias) are the same type as far as
+-- | the compiler is concerned.
+type Json = Argonaut.Json
 
 ----------------------------------------------------------------------------------------------------
 -- Primitives
@@ -72,3 +85,12 @@ decodeNativeTuple2
   -> Json
   -> Either JsonDecodeError (a /\ b)
 decodeNativeTuple2 = Decoders.decodeTuple
+
+----------------------------------------------------------------------------------------------------
+-- Parsing
+----------------------------------------------------------------------------------------------------
+
+-- | Parse a JSON string into a `Json` tree - the one step before any of
+-- | the decoders above can run.
+jsonParser :: String -> Either String Json
+jsonParser = Parser.jsonParser
