@@ -10,7 +10,12 @@ package:
 
   test:
     main: Test.Main
-    dependencies: []
+    dependencies:
+      - either
+      - maybe
+      - spec
+      - spec-node
+      - tuples
 workspace:
   packageSet:
     registry: 78.0.0

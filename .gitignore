@@ -10,3 +10,4 @@ dep-docs/
 .purs*
 .psa*
 .spago
+.spec-results

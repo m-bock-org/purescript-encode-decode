@@ -1,10 +1,10 @@
-module Data.Json.Record
-  ( class EncodeRecord
-  , gEncodeRecord
+-- | Decode a `Record` field-by-field from a matching record of per-field
+-- | decoders - see `Data.Json.Encode.Record` for the other direction.
+module Data.Json.Decode.Record
+  ( module Data.Argonaut.Decode.Error
+  , decodeRecord
   , class DecodeRecord
   , gDecodeRecord
-  , encodeRecord
-  , decodeRecord
   , DecodeWithDefault
   , decodeWithDefault
   , decodeRecordWithDefaults
@@ -13,77 +13,33 @@ module Data.Json.Record
 
 import Prelude
 
-import Data.Argonaut.Core (Json, fromObject, toObject)
+import Data.Argonaut.Core (Json, toObject)
 import Data.Argonaut.Decode (getField)
 import Data.Argonaut.Decode.Error (JsonDecodeError(..))
 import Data.Either (Either(..))
 import Data.Either as Either
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Foreign.Object (Object)
-import Foreign.Object as Obj
+import Heterogeneous.Mapping (class MappingWithIndex, hmapWithIndex, class HMapWithIndex)
 import Prim.Row as Row
 import Prim.RowList (class RowToList)
 import Prim.RowList as RL
 import Record as Record
 import Type.Proxy (Proxy(..))
-import Heterogeneous.Mapping (class MappingWithIndex, hmapWithIndex, class HMapWithIndex)
-
-----------------------------------------------------------------------------------------------------
--- Encode
-----------------------------------------------------------------------------------------------------
-
-encodeRecord :: forall rl rs r. RowToList rs rl => EncodeRecord rl rs r => Record rs -> Record r -> Json
-encodeRecord rs r = fromObject $ gEncodeRecord @rl rs r
-
-class EncodeRecord :: RL.RowList Type -> Row Type -> Row Type -> Constraint
-class EncodeRecord rl rs r | rl -> rs r where
-  gEncodeRecord :: Record rs -> Record r -> Object Json
-
-instance EncodeRecord RL.Nil () () where
-  gEncodeRecord _ _ = Obj.empty
-
-instance
-  ( Row.Cons sym (a -> Json) rs' rs
-  , Row.Cons sym a r' r
-  , IsSymbol sym
-  , EncodeRecord rl rs' r'
-  , Row.Lacks sym rs'
-  , Row.Lacks sym r'
-  ) =>
-  EncodeRecord (RL.Cons sym _x rl) rs r where
-  gEncodeRecord rs r = Obj.insert fieldName (encode value) tail
-    where
-    fieldName = reflectSymbol (Proxy @sym)
-    encode = Record.get (Proxy @sym) rs
-    value = Record.get (Proxy @sym) r
-
-    tail = gEncodeRecord @rl (Record.delete (Proxy @sym) rs) (Record.delete (Proxy @sym) r)
 
 ----------------------------------------------------------------------------------------------------
 -- Decode
 ----------------------------------------------------------------------------------------------------
 
--- | A field decoder plus what to use when the field is *missing*
--- | entirely - a distinct type from a plain `Json -> Either
--- | JsonDecodeError a`, not just a function with a fallback baked in, so
--- | `DecodeRecord`'s generic derivation can dispatch on it per field (see
--- | the `DecodeRecord (RL.Cons sym (DecodeWithDefault a) rl) rs r`
--- | instance below) and catch a missing key *before* `decode` ever runs,
--- | rather than needing every field in a record to opt into the same
--- | fallback behavior.
-data DecodeWithDefault a = DecodeWithDefault
-  { default :: a
-  , decode :: Json -> Either JsonDecodeError a
-  }
-
-decodeWithDefault :: forall a. a -> (Json -> Either JsonDecodeError a) -> DecodeWithDefault a
-decodeWithDefault def dec = DecodeWithDefault { default: def, decode: dec }
-
+-- | `decodeRecord { name: decodeString } json` - `rs` is a record of
+-- | per-field decoders, matched against `json`'s own keys.
 decodeRecord :: forall rl rs r. RowToList rs rl => DecodeRecord rl rs r => Record rs -> Json -> Either JsonDecodeError (Record r)
 decodeRecord rs json = do
   obj <- Either.note (TypeMismatch "Object") (toObject json)
   gDecodeRecord @rl rs obj
 
+-- | Generic derivation for `decodeRecord`, one field at a time via `rl`.
+-- | Not meant to be used directly - go through `decodeRecord`.
 class DecodeRecord :: RL.RowList Type -> Row Type -> Row Type -> Constraint
 class DecodeRecord rl rs r | rl -> rs r where
   gDecodeRecord :: Record rs -> Object Json -> Either JsonDecodeError (Record r)
@@ -157,6 +113,23 @@ instance
 -- Decode with defaults
 ----------------------------------------------------------------------------------------------------
 
+-- | A field decoder plus what to use when the field is *missing*
+-- | entirely - a distinct type from a plain `Json -> Either
+-- | JsonDecodeError a`, not just a function with a fallback baked in, so
+-- | `DecodeRecord`'s generic derivation can dispatch on it per field (see
+-- | the `DecodeRecord (RL.Cons sym (DecodeWithDefault a) rl) rs r`
+-- | instance above) and catch a missing key *before* `decode` ever runs,
+-- | rather than needing every field in a record to opt into the same
+-- | fallback behavior.
+data DecodeWithDefault a = DecodeWithDefault
+  { default :: a
+  , decode :: Json -> Either JsonDecodeError a
+  }
+
+-- | Build a `DecodeWithDefault` from a default value and a decoder.
+decodeWithDefault :: forall a. a -> (Json -> Either JsonDecodeError a) -> DecodeWithDefault a
+decodeWithDefault def dec = DecodeWithDefault { default: def, decode: dec }
+
 -- | The `hmapWithIndex` "props" that pairs each field's plain decoder
 -- | (from `decs` in `decodeRecordWithDefaults`) with that same field's
 -- | default (looked up from `defs` by symbol) to build a
@@ -183,10 +156,10 @@ instance decodeDefaultsMapping ::
 -- | types rather than requiring every field to share one.
 -- |
 -- | ```purescript
--- | decodeConfig :: Json -> Either JsonDecodeError Config
--- | decodeConfig = decodeRecordWithDefaults defaultConfig
--- |   { ollamaUrl: decode_String
--- |   , pollIntervalMs: decode_Milliseconds
+-- | decodeBook :: Json -> Either JsonDecodeError { title :: String, pages :: Int }
+-- | decodeBook = decodeRecordWithDefaults defaultBook
+-- |   { title: decodeString
+-- |   , pages: decodeInt
 -- |   }
 -- | ```
 decodeRecordWithDefaults
