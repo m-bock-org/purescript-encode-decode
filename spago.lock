@@ -7,6 +7,7 @@
           "dependencies": [
             "argonaut-codecs",
             "argonaut-core",
+            "heterogeneous",
             "prelude",
             "record",
             "tuples"
@@ -29,6 +30,7 @@
             "functions",
             "functors",
             "gen",
+            "heterogeneous",
             "identity",
             "integers",
             "invariant",
@@ -53,7 +55,8 @@
             "type-equality",
             "typelevel-prelude",
             "unfoldable",
-            "unsafe-coerce"
+            "unsafe-coerce",
+            "variant"
           ]
         },
         "test": {
@@ -952,6 +955,20 @@
         "unfoldable"
       ]
     },
+    "heterogeneous": {
+      "type": "registry",
+      "version": "0.7.0",
+      "integrity": "sha256-pQwcFvhWL8noktxaoD7FlLs2F2lYf3QHoyO0VOWO3I0=",
+      "dependencies": [
+        "either",
+        "foldable-traversable",
+        "functors",
+        "prelude",
+        "record",
+        "tuples",
+        "variant"
+      ]
+    },
     "identity": {
       "type": "registry",
       "version": "6.0.0",
@@ -1226,6 +1243,21 @@
       "version": "6.0.0",
       "integrity": "sha256-0L1QsaY20OILjfU5TV72d3U/tSjhmL9hJ32WMp857Lk=",
       "dependencies": []
+    },
+    "variant": {
+      "type": "registry",
+      "version": "8.0.0",
+      "integrity": "sha256-Ydrgl8liWEwYQOWW76PdZtg3vxKpoKgsnmFyTLgZkoU=",
+      "dependencies": [
+        "enums",
+        "lists",
+        "maybe",
+        "partial",
+        "prelude",
+        "record",
+        "tuples",
+        "unsafe-coerce"
+      ]
     }
   }
 }

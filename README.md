@@ -40,6 +40,28 @@ Ported from `pursai-orange`'s `pursai-fast-api` package, where it originated -
 extracted here so it can be shared across projects instead of living inside
 one app.
 
+Also here: `decodeRecordWithDefaults` - like `decodeRecord`, but a field
+whose key is missing from the JSON object entirely falls back to a default
+instead of failing, given a record of defaults alongside the record of
+decoders:
+
+```purescript
+decodeConfig :: Json -> Either JsonDecodeError Config
+decodeConfig = decodeRecordWithDefaults defaultConfig
+  { ollamaUrl: decode_String
+  , pollIntervalMs: decode_Milliseconds
+  }
+```
+
+Only a genuinely *missing* key triggers the fallback - a key that's present
+with the value `null` does not, even though that reads as "no value" too.
+That's deliberate: `null` is already a real, different value for some field
+types (a `Maybe a` field decodes it as `Nothing`), so treating every `null`
+as "use the default" would silently turn an intentional `Nothing` into the
+default for any `Maybe`-typed field. Letting `null` fall through to each
+field's own decoder means it keeps meaning whatever that decoder says it
+means, with no special-casing needed to get that right.
+
 ## Usage
 
 Add as a dependency (currently unpublished - use a `path:` or pinned `git:`

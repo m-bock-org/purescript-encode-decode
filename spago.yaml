@@ -5,6 +5,7 @@ package:
     - argonaut-codecs
     - prelude
     - record
+    - heterogeneous
     - tuples
 
   test:
