@@ -6,6 +6,7 @@
 module Data.Json.Decode
   ( module Data.Argonaut.Decode.Error
   , Json
+  , DecodeJson
   , decodeString
   , decodeNumber
   , decodeInt
@@ -38,6 +39,12 @@ import Foreign.Object as Obj
 -- | Core` (or `Data.Json.Encode`'s own alias) are the same type as far as
 -- | the compiler is concerned.
 type Json = Argonaut.Json
+
+-- | The shape every `decode{Type} :: DecodeJson {Type}` function in a
+-- | consumer's own codebase is expected to have - naming it lets a
+-- | signature say "this is a JSON decoder for `a`" instead of writing
+-- | `Json -> Either JsonDecodeError a` out by hand at every call site.
+type DecodeJson a = Json -> Either JsonDecodeError a
 
 ----------------------------------------------------------------------------------------------------
 -- Primitives

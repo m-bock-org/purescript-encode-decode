@@ -5,6 +5,7 @@
 -- | one thing in this library that isn't trivial.
 module Data.Json.Encode
   ( Json
+  , EncodeJson
   , encodeString
   , encodeNumber
   , encodeInt
@@ -34,6 +35,12 @@ import Foreign.Object as Obj
 -- | Core` (or `Data.Json.Decode`'s own alias) are the same type as far as
 -- | the compiler is concerned.
 type Json = Argonaut.Json
+
+-- | The shape every `encode{Type} :: EncodeJson {Type}` function in a
+-- | consumer's own codebase is expected to have - naming it lets a
+-- | signature say "this is a JSON encoder for `a`" instead of writing
+-- | `a -> Json` out by hand at every call site.
+type EncodeJson a = a -> Json
 
 ----------------------------------------------------------------------------------------------------
 -- Primitives
