@@ -12,14 +12,20 @@ module Data.Json.Encode
   , encodeArray
   , encodeObject
   , encodeNativeTuple2
+  , encodeMapToObject
   , jsonNull
   , stringify
   ) where
 
+import Prelude
+
 import Data.Argonaut.Core as Argonaut
 import Data.Argonaut.Encode.Encoders as Encoders
-import Data.Tuple.Nested (type (/\))
+import Data.Map (Map)
+import Data.Map as Map
+import Data.Tuple.Nested (type (/\), (/\))
 import Foreign.Object (Object)
+import Foreign.Object as Obj
 
 -- | Naming an imported type directly in an export list doesn't re-export
 -- | it in PureScript (only `module X` does, which would re-export all of
@@ -73,6 +79,22 @@ encodeObject = Encoders.encodeForeignObject
 -- | Encode a native tuple `a /\ b` as a 2-element JSON array.
 encodeNativeTuple2 :: forall a b. (a -> Json) -> (b -> Json) -> (a /\ b) -> Json
 encodeNativeTuple2 = Encoders.encodeTuple
+
+----------------------------------------------------------------------------------------------------
+-- Map
+----------------------------------------------------------------------------------------------------
+
+encodeMapToObject :: forall k v. (k -> String) -> (v -> Json) -> Map k v -> Json
+encodeMapToObject keyEncoder valueEncoder m = encodeObject identity obj
+  where
+  mkEntry :: (k /\ v) -> (String /\ Json)
+  mkEntry (k /\ v) = keyEncoder k /\ valueEncoder v
+
+  entries :: Array (String /\ Json)
+  entries = map mkEntry (Map.toUnfoldable m)
+
+  obj :: Object Json
+  obj = Obj.fromFoldable entries
 
 ----------------------------------------------------------------------------------------------------
 -- Raw tree

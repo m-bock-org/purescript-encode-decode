@@ -13,16 +13,23 @@ module Data.Json.Decode
   , decodeArray
   , decodeObject
   , decodeNativeTuple2
+  , decodeMapFromObject
   , jsonParser
   ) where
+
+import Prelude
 
 import Data.Argonaut.Core as Argonaut
 import Data.Argonaut.Decode.Decoders as Decoders
 import Data.Argonaut.Decode.Error (JsonDecodeError(..), printJsonDecodeError)
 import Data.Argonaut.Parser (jsonParser) as Parser
 import Data.Either (Either)
-import Data.Tuple.Nested (type (/\))
+import Data.Map (Map)
+import Data.Map as Map
+import Data.Traversable (for)
+import Data.Tuple.Nested (type (/\), (/\))
 import Foreign.Object (Object)
+import Foreign.Object as Obj
 
 -- | Naming an imported type directly in an export list doesn't re-export
 -- | it in PureScript (only `module X` does, which would re-export all of
@@ -85,6 +92,25 @@ decodeNativeTuple2
   -> Json
   -> Either JsonDecodeError (a /\ b)
 decodeNativeTuple2 = Decoders.decodeTuple
+
+----------------------------------------------------------------------------------------------------
+-- Map
+----------------------------------------------------------------------------------------------------
+
+decodeMapFromObject
+  :: forall k v
+   . Ord k
+  => (String -> Either JsonDecodeError k)
+  -> (Json -> Either JsonDecodeError v)
+  -> Json
+  -> Either JsonDecodeError (Map k v)
+decodeMapFromObject decodeK decodeV json = do
+  obj <- decodeObject pure json
+  entries :: Array _ <- for (Obj.toUnfoldable obj) \(kStr /\ vJson) -> do
+    k <- decodeK kStr
+    v <- decodeV vJson
+    pure (k /\ v)
+  pure $ Map.fromFoldable entries
 
 ----------------------------------------------------------------------------------------------------
 -- Parsing

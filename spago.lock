@@ -7,7 +7,11 @@
           "dependencies": [
             "argonaut-codecs",
             "argonaut-core",
+            "either",
+            "foldable-traversable",
+            "foreign-object",
             "heterogeneous",
+            "ordered-collections",
             "prelude",
             "record",
             "tuples"
@@ -15,6 +19,7 @@
         },
         "test": {
           "dependencies": [
+            "effect",
             "either",
             "maybe",
             "spec",

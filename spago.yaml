@@ -3,6 +3,10 @@ package:
   dependencies:
     - argonaut-core
     - argonaut-codecs
+    - either
+    - foldable-traversable
+    - foreign-object
+    - ordered-collections
     - prelude
     - record
     - heterogeneous
@@ -11,6 +15,7 @@ package:
   test:
     main: Test.Main
     dependencies:
+      - effect
       - either
       - maybe
       - spec
