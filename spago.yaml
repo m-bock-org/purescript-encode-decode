@@ -3,13 +3,16 @@ package:
   dependencies:
     - argonaut-core
     - argonaut-codecs
+    - arrays
     - either
     - foldable-traversable
     - foreign-object
+    - maybe
     - ordered-collections
     - prelude
     - record
     - heterogeneous
+    - strings
     - tuples
 
   test:

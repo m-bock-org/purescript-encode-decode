@@ -7,13 +7,16 @@
           "dependencies": [
             "argonaut-codecs",
             "argonaut-core",
+            "arrays",
             "either",
             "foldable-traversable",
             "foreign-object",
             "heterogeneous",
+            "maybe",
             "ordered-collections",
             "prelude",
             "record",
+            "strings",
             "tuples"
           ]
         },
