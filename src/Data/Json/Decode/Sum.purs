@@ -4,7 +4,7 @@
 -- | `Data.Json.Sum.Encoding` for the wire format the two share.
 -- |
 -- | ```purescript
--- | decodeShape :: Json -> Either JsonDecodeError Shape
+-- | decodeShape :: DecodeJson Shape
 -- | decodeShape = decodeSum
 -- |   { "Circle": decodeNumber
 -- |   , "Rect": decodeNumber /\ decodeNumber
@@ -30,7 +30,17 @@ import Prelude
 import Data.Array (uncons) as Array
 import Data.Either (Either(..), note)
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), Product(..), Sum(..), to)
-import Data.Json.Decode (Json, JsonDecodeError(..), decodeArray, decodeObject, decodeString)
+import Data.Json.Decode
+  ( DecodeJson
+  , Json
+  , JsonDecodeError(..)
+  , decodeArray
+  , decodeObject
+  , decodeRawJson
+  , decodeString
+  , fromFn
+  , toFn
+  )
 import Data.Json.Sum.Encoding (Encoding(..), defaultEncoding)
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
@@ -87,8 +97,7 @@ decodeSum
    . Generic a rep
   => DecodeCases r rep
   => Record r
-  -> Json
-  -> Either JsonDecodeError a
+  -> DecodeJson a
 decodeSum = decodeSumWith defaultEncoding
 
 -- | `decodeSum` with an explicit wire format - see `Encoding`.
@@ -98,9 +107,8 @@ decodeSumWith
   => DecodeCases r rep
   => Encoding
   -> Record r
-  -> Json
-  -> Either JsonDecodeError a
-decodeSumWith encoding r json = to <$> finalizeErr (gDecodeCases encoding r json)
+  -> DecodeJson a
+decodeSumWith encoding r = fromFn \json -> to <$> finalizeErr (gDecodeCases encoding r json)
 
 -- | Generic derivation for `decodeSum`, one constructor at a time.
 -- | Not meant to be used directly - go through `decodeSum`.
@@ -118,20 +126,20 @@ instance
     case payload of
       Nothing -> pure unit
       Just raw -> do
-        values <- jErr (decodeArray pure raw)
+        values <- jErr (toFn (decodeArray decodeRawJson) raw)
         when (values /= []) (Left (JErr (TypeMismatch "no constructor arguments")))
     pure (Constructor NoArguments)
 
 else instance
-  ( Row.Cons name (Json -> Either JsonDecodeError a) () r
+  ( Row.Cons name (DecodeJson a) () r
   , IsSymbol name
   ) =>
   DecodeCases r (Constructor name (Argument a)) where
   gDecodeCases encoding r json = do
     payload <- lookupCase encoding json (reflectSymbol (Proxy @name))
     value <- singleValue encoding payload
-    let decode = Record.get (Proxy @name) r :: Json -> Either JsonDecodeError a
-    Constructor <<< Argument <$> jErr (decode value)
+    let decode = Record.get (Proxy @name) r :: DecodeJson a
+    Constructor <<< Argument <$> jErr (toFn decode value)
 
 else instance
   ( Row.Cons name decoders () r
@@ -180,9 +188,9 @@ class DecodeFields :: Type -> Type -> Constraint
 class DecodeFields decoders rep where
   gDecodeFields :: decoders -> Array Json -> Either JsonDecodeError rep
 
-instance DecodeFields (Json -> Either JsonDecodeError a) (Argument a) where
+instance DecodeFields (DecodeJson a) (Argument a) where
   gDecodeFields decode = case _ of
-    [ json ] -> Argument <$> decode json
+    [ json ] -> Argument <$> toFn decode json
     _ -> Left (TypeMismatch "exactly one constructor argument")
 
 instance
@@ -202,8 +210,7 @@ instance
 
 -- | For a `data` type whose constructors are *all* nullary: decodes
 -- | from a plain JSON string, not a tagged object.
-decodeEnum
-  :: forall rep a. Generic a rep => DecodeEnum rep => Json -> Either JsonDecodeError a
+decodeEnum :: forall rep a. Generic a rep => DecodeEnum rep => DecodeJson a
 decodeEnum = decodeEnumWith identity
 
 -- | `decodeEnum`, matching against constructor names rewritten by
@@ -213,10 +220,9 @@ decodeEnumWith
    . Generic a rep
   => DecodeEnum rep
   => (String -> String)
-  -> Json
-  -> Either JsonDecodeError a
-decodeEnumWith mapTag json = do
-  tag <- decodeString json
+  -> DecodeJson a
+decodeEnumWith mapTag = fromFn \json -> do
+  tag <- toFn decodeString json
   case gDecodeEnum mapTag tag of
     Just rep -> Right (to rep)
     Nothing -> Left (UnexpectedValue json)
@@ -249,14 +255,14 @@ instance
 -- | UnmatchedCase` when this isn't that constructor at all.
 lookupCase :: Encoding -> Json -> String -> Either Err (Maybe Json)
 lookupCase encoding json expectedTagRaw = do
-  obj <- jErr (decodeObject pure json)
+  obj <- jErr (toFn (decodeObject decodeRawJson) json)
   case encoding of
     EncodeNested { mapTag } ->
       Just <$> note UnmatchedCase (Obj.lookup (mapTag expectedTagRaw) obj)
 
     EncodeTagged { tagKey, valuesKey, mapTag } -> do
       rawTag <- note (JErr (AtKey tagKey MissingValue)) (Obj.lookup tagKey obj)
-      tag <- jErr (decodeString rawTag)
+      tag <- jErr (toFn decodeString rawTag)
       when (tag /= mapTag expectedTagRaw) (Left UnmatchedCase)
       pure (Obj.lookup valuesKey obj)
 
@@ -268,7 +274,7 @@ singleValue encoding payload = do
   raw <- note (JErr (TypeMismatch "one constructor argument")) payload
   if unwraps then pure raw
   else do
-    values <- jErr (decodeArray pure raw)
+    values <- jErr (toFn (decodeArray decodeRawJson) raw)
     case values of
       [ value ] -> pure value
       _ -> Left (JErr (TypeMismatch "exactly one constructor argument"))
@@ -280,4 +286,4 @@ singleValue encoding payload = do
 manyValues :: Maybe Json -> Either Err (Array Json)
 manyValues payload = do
   raw <- note (JErr (TypeMismatch "constructor arguments")) payload
-  jErr (decodeArray pure raw)
+  jErr (toFn (decodeArray decodeRawJson) raw)
