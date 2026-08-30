@@ -120,6 +120,49 @@ spec = do
           (Encode.toFn (encodeArray encodeInt) [ 1, 2, 3 ])
           `shouldSatisfy` isLeft
 
+    -- The encoder on its own, asserted against exact wire text rather than
+    -- through a round-trip: a round-trip passes just as happily when both
+    -- sides are wrong in the same way.
+    describe "n-tuple encoder" do
+      it "writes a 2-tuple as a flat 2-element array" do
+        stringify (Encode.toFn (encodeTuple (encodeString /\ encodeInt)) ("a" /\ 1))
+          `shouldEqual` """["a",1]"""
+
+      it "writes a 3-tuple as a flat 3-element array, in order" do
+        stringify
+          ( Encode.toFn (encodeTuple (encodeString /\ encodeInt /\ encodeBoolean))
+              ("a" /\ 1 /\ true)
+          )
+          `shouldEqual` """["a",1,true]"""
+
+      it "writes a 5-tuple flat, not right-nested" do
+        stringify
+          ( Encode.toFn
+              (encodeTuple (encodeInt /\ encodeInt /\ encodeInt /\ encodeInt /\ encodeString))
+              (1 /\ 2 /\ 3 /\ 4 /\ "five")
+          )
+          `shouldEqual` """[1,2,3,4,"five"]"""
+
+      it "nests only where a nested tuple codec says so" do
+        stringify
+          ( Encode.toFn
+              (encodeTuple (encodeInt /\ encodeTuple (encodeString /\ encodeBoolean)))
+              (1 /\ ("a" /\ true))
+          )
+          `shouldEqual` """[1,["a",true]]"""
+
+      it "applies each position's own encoder, not one shared encoder" do
+        stringify (Encode.toFn (encodeTuple (encodeString /\ encodeString)) ("1" /\ "2"))
+          `shouldEqual` """["1","2"]"""
+        stringify (Encode.toFn (encodeTuple (encodeInt /\ encodeInt)) (1 /\ 2))
+          `shouldEqual` """[1,2]"""
+
+      it "agrees with encodeNativeTuple2 at two positions" do
+        let value = "a" /\ 1
+        stringify (Encode.toFn (encodeTuple (encodeString /\ encodeInt)) value)
+          `shouldEqual`
+            stringify (Encode.toFn (encodeNativeTuple2 encodeString encodeInt) value)
+
     describe "n-tuple" do
       it "round-trips a 2-tuple" do
         let value = "a" /\ 1
