@@ -16,6 +16,11 @@ module Data.Json.Encode
   , fromFn
   , toFn
   , encodeRawJson
+  , Encoded
+  , encoded
+  , encodeDispatch
+  , encodeToString
+  , encodeToStringWithIndent
   , encodeString
   , encodeNumber
   , encodeInt
@@ -80,6 +85,49 @@ toFn (EncodeJson f) = f
 -- | `Array Json`. Mirror of `Data.Json.Decode.decodeRawJson`.
 encodeRawJson :: EncodeJson Json
 encodeRawJson = EncodeJson identity
+
+-- | One value, already encoded, carrying no trace of which encoder did
+-- | it. The result of `encoded`, and the only thing `encodeDispatch`
+-- | accepts - see both.
+newtype Encoded = Encoded Json
+
+-- | Pair a value with the encoder for it. Nothing can be read back out;
+-- | the point is to make "this branch encodes itself this way" a value,
+-- | so a sum's branches can each choose their own shape.
+encoded :: forall a. EncodeJson a -> a -> Encoded
+encoded (EncodeJson f) a = Encoded (f a)
+
+-- | Build an encoder for a sum by choosing, per case, how that case
+-- | encodes itself.
+-- |
+-- | This is the encoder counterpart of `Alt`/`bind` on the decode side,
+-- | and the reason a tagged union does not need `fromFn`. `Contravariant`
+-- | alone cannot express it: `cmap` needs every case to end in one shape,
+-- | and a sum's whole point is that they do not.
+-- |
+-- |     encodeResult :: EncodeJson Result
+-- |     encodeResult = encodeDispatch case _ of
+-- |       Ok n -> encoded (encodeRecord { tag: encodeString, value: encodeInt })
+-- |         { tag: "ok", value: n }
+-- |       Err e -> encoded (encodeRecord { tag: encodeString, reason: encodeString })
+-- |         { tag: "err", reason: e }
+-- |
+-- | For a `Generic` sum with a uniform wire shape, `Data.Json.Encode.Sum`
+-- | derives all of this instead; reach for `encodeDispatch` when the
+-- | format is per-case rather than mechanical.
+encodeDispatch :: forall a. (a -> Encoded) -> EncodeJson a
+encodeDispatch f = EncodeJson \a -> case f a of Encoded json -> json
+
+-- | Encode straight to a JSON document. The boundary combinator, and the
+-- | mirror of `Data.Json.Decode.decodeFromString`: at the edge where a
+-- | `String` is what is wanted - a file to write, a request body - this is
+-- | the whole journey, with no intermediate `Json` for a caller to hold.
+encodeToString :: forall a. EncodeJson a -> a -> String
+encodeToString (EncodeJson f) = stringify <<< f
+
+-- | `encodeToString`, indented for a human to read.
+encodeToStringWithIndent :: forall a. Int -> EncodeJson a -> a -> String
+encodeToStringWithIndent n (EncodeJson f) = Argonaut.stringifyWithIndent n <<< f
 
 ----------------------------------------------------------------------------------------------------
 -- Primitives

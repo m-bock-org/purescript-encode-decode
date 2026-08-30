@@ -17,12 +17,17 @@ module Data.Json.Decode
   , fromFn
   , toFn
   , decodeRawJson
+  , decodeFail
+  , decodeRefine
+  , decodeAttempt
+  , decodeFromString
   , decodeString
   , decodeNumber
   , decodeInt
   , decodeBoolean
   , decodeArray
   , decodeObject
+  , decodeObjectWithKey
   , decodeNativeTuple2
   , decodeMapFromObject
   , decodeTupleArrayFromObject
@@ -40,6 +45,7 @@ import Data.Either (Either(..))
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Traversable (for)
+import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (type (/\), (/\))
 import Foreign.Object (Object)
 import Foreign.Object as Obj
@@ -104,6 +110,43 @@ toFn (DecodeJson f) = f
 decodeRawJson :: DecodeJson Json
 decodeRawJson = DecodeJson Right
 
+-- | The decoder that always fails, with the error you name. `pure`'s
+-- | opposite, and what makes a `bind` chain able to reject: decode a tag,
+-- | branch on it, and answer with this on the branch that has no reading.
+-- | Without it a dispatching decoder has to drop to `fromFn` just to
+-- | produce a `Left`.
+decodeFail :: forall a. JsonDecodeError -> DecodeJson a
+decodeFail err = DecodeJson \_ -> Left err
+
+-- | Decode, then narrow the result - a parse into a smarter type, a range
+-- | check, a lookup that can miss. The common shape behind "decode a
+-- | `String` and then turn it into the thing it spells".
+-- |
+-- | This is the combinator that keeps refinement out of `fromFn`. The
+-- | refining function sees the decoded `a`, not the `Json`; when the error
+-- | wants to quote the original document, pair it in first - `Tuple <$>
+-- | decodeRawJson <*> decodeString` hands you both, because `DecodeJson`
+-- | is `Applicative`.
+decodeRefine :: forall a b. (a -> Either JsonDecodeError b) -> DecodeJson a -> DecodeJson b
+decodeRefine f (DecodeJson g) = DecodeJson \json -> f =<< g json
+
+-- | Run a decoder and hand back its *result*, success or failure, without
+-- | failing. For a field whose own decode failure must not abort the
+-- | document around it - an envelope whose error array explains why the
+-- | payload is unreadable, and would be lost if the payload aborted first.
+decodeAttempt :: forall a. DecodeJson a -> DecodeJson (Either JsonDecodeError a)
+decodeAttempt (DecodeJson f) = DecodeJson (Right <<< f)
+
+-- | Parse a JSON document and decode it in one step. The boundary
+-- | combinator: at the edge where a `String` arrives - a file, a response
+-- | body - this is the whole journey, with no intermediate `Json` for a
+-- | caller to hold. A parse failure is reported as a `TypeMismatch`, since
+-- | `jsonParser` explains itself in prose rather than in `JsonDecodeError`.
+decodeFromString :: forall a. DecodeJson a -> String -> Either JsonDecodeError a
+decodeFromString d raw = case Parser.jsonParser raw of
+  Left err -> Left (TypeMismatch ("well-formed JSON, got: " <> err))
+  Right json -> toFn d json
+
 ----------------------------------------------------------------------------------------------------
 -- Primitives
 ----------------------------------------------------------------------------------------------------
@@ -142,6 +185,16 @@ decodeArray (DecodeJson f) = DecodeJson (Decoders.decodeArray f)
 -- | to get the raw, undecoded `Object Json` back.
 decodeObject :: forall a. DecodeJson a -> DecodeJson (Object a)
 decodeObject (DecodeJson f) = DecodeJson (Decoders.decodeForeignObject f)
+
+-- | `decodeObject` where each value's decoder may depend on its own key.
+-- | For a wire format whose keys are data and whose values are read in
+-- | terms of them - a response keyed by pair code, where the code belongs
+-- | in the decoded value.
+decodeObjectWithKey :: forall a. (String -> DecodeJson a) -> DecodeJson (Object a)
+decodeObjectWithKey f = DecodeJson \json -> do
+  obj <- toFn (decodeObject decodeRawJson) json
+  Obj.fromFoldable <$> for (Obj.toUnfoldable obj :: Array (String /\ Json))
+    (\(k /\ v) -> map (Tuple k) (toFn (f k) v))
 
 ----------------------------------------------------------------------------------------------------
 -- Tuple

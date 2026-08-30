@@ -5,7 +5,8 @@ import Prelude
 import Data.Argonaut.Core (fromBoolean, fromNumber)
 import Data.Either (Either(..), isLeft)
 import Data.Json.Decode
-  ( JsonDecodeError(..)
+  ( DecodeJson
+  , JsonDecodeError(..)
   , decodeArray
   , decodeBoolean
   , decodeInt
@@ -17,6 +18,8 @@ import Data.Json.Decode
   , decodeTupleArrayFromObject
   )
 import Data.Json.Decode (toFn) as Decode
+import Data.Json.Decode (decodeAttempt, decodeFail, decodeFromString, decodeObjectWithKey, decodeRefine) as D
+import Data.Json.Decode.Record (decodeRecord)
 import Data.Json.Decode.Tuple (decodeTuple)
 import Data.Json.Encode
   ( encodeArray
@@ -30,6 +33,8 @@ import Data.Json.Encode
   , stringify
   )
 import Data.Json.Encode (toFn) as Encode
+import Data.Json.Encode (encodeDispatch, encodeToString, encoded) as E
+import Data.Json.Encode.Record (encodeRecord)
 import Data.Json.Encode.Tuple (encodeTuple)
 import Data.Map as Map
 import Data.Tuple.Nested ((/\))
@@ -213,3 +218,90 @@ spec = do
         Decode.toFn (decodeTuple (decodeInt /\ decodeString /\ decodeInt))
           (Encode.toFn (encodeTuple (encodeInt /\ encodeInt /\ encodeInt)) (1 /\ 2 /\ 3))
           `shouldEqual` Left (AtIndex 1 (TypeMismatch "String"))
+
+  describe "decodeFromString" do
+    it "parses and decodes in one step" do
+      D.decodeFromString (decodeRecord { a: decodeInt }) """{"a":1}"""
+        `shouldEqual` Right { a: 1 }
+
+    it "reports malformed JSON as a decode error, not a crash" do
+      (D.decodeFromString decodeInt "{not json" :: Either JsonDecodeError Int)
+        `shouldSatisfy` isLeft
+
+    it "still reports a decode failure on well-formed JSON" do
+      (D.decodeFromString decodeInt """"nope"""" :: Either JsonDecodeError Int)
+        `shouldEqual` Left (TypeMismatch "Number")
+
+  describe "decodeFail" do
+    it "fails with the error it is given" do
+      Decode.toFn (D.decodeFail (TypeMismatch "on purpose") :: DecodeJson Int)
+        (Encode.toFn encodeInt 1)
+        `shouldEqual` Left (TypeMismatch "on purpose")
+
+    it "lets a bind chain reject a tag it does not know" do
+      let
+        dec = decodeRecord { kind: decodeString } >>= case _ of
+          { kind: "int" } -> decodeRecord { value: decodeInt }
+          { kind } -> D.decodeFail (AtKey "kind" (TypeMismatch kind))
+      D.decodeFromString dec """{"kind":"int","value":7}""" `shouldEqual` Right { value: 7 }
+      (D.decodeFromString dec """{"kind":"other","value":7}""" :: Either JsonDecodeError { value :: Int })
+        `shouldEqual` Left (AtKey "kind" (TypeMismatch "other"))
+
+  describe "decodeRefine" do
+    it "narrows a decoded value" do
+      let dec = D.decodeRefine (\n -> if n > 0 then Right n else Left (TypeMismatch "positive")) decodeInt
+      D.decodeFromString dec "3" `shouldEqual` Right 3
+
+    it "fails when the narrowing rejects" do
+      let dec = D.decodeRefine (\n -> if n > 0 then Right n else Left (TypeMismatch "positive")) decodeInt
+      D.decodeFromString dec "-3" `shouldEqual` Left (TypeMismatch "positive")
+
+    it "does not run the refinement when the decode itself failed" do
+      let dec = D.decodeRefine (\_ -> Left (TypeMismatch "refinement ran")) decodeInt
+      (D.decodeFromString dec """"nope"""" :: Either JsonDecodeError Int)
+        `shouldEqual` Left (TypeMismatch "Number")
+
+  describe "decodeAttempt" do
+    it "reports a success as Right without failing" do
+      D.decodeFromString (D.decodeAttempt decodeInt) "1" `shouldEqual` Right (Right 1)
+
+    it "captures a failure as a value instead of aborting" do
+      D.decodeFromString (D.decodeAttempt decodeInt) """"nope""""
+        `shouldEqual` Right (Left (TypeMismatch "Number"))
+
+    it "lets a sibling field survive an unreadable one" do
+      let dec = decodeRecord { error: decodeString, result: D.decodeAttempt decodeInt }
+      D.decodeFromString dec """{"error":"why","result":"nope"}"""
+        `shouldEqual` Right { error: "why", result: Left (TypeMismatch "Number") }
+
+  describe "decodeObjectWithKey" do
+    it "gives each value a decoder chosen by its own key" do
+      let dec = D.decodeObjectWithKey \k -> map (\n -> k <> "=" <> show n) decodeInt
+      D.decodeFromString dec """{"a":1,"b":2}"""
+        `shouldEqual` Right (Object.fromFoldable [ "a" /\ "a=1", "b" /\ "b=2" ])
+
+    it "fails on the first value its own key's decoder rejects" do
+      let dec = D.decodeObjectWithKey \k -> if k == "a" then decodeInt else D.decodeFail (TypeMismatch k)
+      (D.decodeFromString dec """{"a":1,"b":2}""" :: Either JsonDecodeError (Object.Object Int))
+        `shouldEqual` Left (TypeMismatch "b")
+
+  describe "encodeDispatch" do
+    it "lets each case of a sum choose its own shape" do
+      let
+        enc = E.encodeDispatch case _ of
+          Left n -> E.encoded (encodeRecord { tag: encodeString, value: encodeInt })
+            { tag: "ok", value: n }
+          Right e -> E.encoded (encodeRecord { tag: encodeString, reason: encodeString })
+            { tag: "err", reason: e }
+      E.encodeToString enc (Left 1 :: Either Int String) `shouldEqual` """{"value":1,"tag":"ok"}"""
+      E.encodeToString enc (Right "bad" :: Either Int String)
+        `shouldEqual` """{"tag":"err","reason":"bad"}"""
+
+  describe "encodeToString" do
+    it "encodes straight to a document" do
+      E.encodeToString (encodeRecord { a: encodeInt }) { a: 1 } `shouldEqual` """{"a":1}"""
+
+    it "round-trips with decodeFromString" do
+      let codec = { enc: encodeRecord { a: encodeInt }, dec: decodeRecord { a: decodeInt } }
+      D.decodeFromString codec.dec (E.encodeToString codec.enc { a: 42 })
+        `shouldEqual` Right { a: 42 }
