@@ -170,11 +170,28 @@ practice this never bites, because the instances are written against
 `Decode a` rather than the alias, and nothing abstracts over the alias
 itself. Worth knowing before meeting the error.
 
-**The encode side does not get the same gift, and that is fine.**
-`Encode a b = a -> b` has no failure, so its composition is ordinary
-function composition - which is exactly what `cmap` already provides.
-The asymmetry is not introduced here; it is revealed. Decode lacked
-general composition *because* failure was involved.
+**The encode side gets the same treatment, one base down.**
+
+```purescript
+newtype Encode a b = Encode (a -> b)
+type EncodeJson a = Encode a Json
+```
+
+`Encode a b` is a newtype over `Function`, so `Semigroupoid`/`Category`
+are ordinary function composition and `Profunctor` supplies `lmap` -
+which is what `cmap` is today. So `cmap` retires alongside
+`decodeRefine`:
+
+    encodeDecimal = lmap toDecimalString encodeString
+
+The two sides end up the same shape over different bases: `Decode` is
+Kleisli over `Either e`, `Encode` is plain functions. Composition on
+both; failure only where failure is possible. There is no asymmetry to
+apologise for - there is one fewer capability on the side that cannot
+fail.
+
+It stays a newtype. An alias for `->` would hand back exactly the
+opacity the escape-hatch ban depends on.
 
 **Migration.** Signatures are untouched thanks to the alias. What changes
 is `decodeRefine`'s call sites (about fifteen in tick-duck), each
@@ -191,6 +208,21 @@ permanent.
 
 `Strong` and `Choice` are available and deliberately not planned - add
 them when something wants them, not before.
+
+## `encodeDispatch` has a real name
+
+Choosing between differently-typed encoders for a sum is `Decidable`'s
+`choose` from the contravariant hierarchy:
+
+    choose :: (a -> Either b c) -> f b -> f c -> f a
+
+`encoded`/`encodeDispatch` is the n-ary ergonomic form of it. Nesting
+`Either`s for an eight-constructor sum - which `JournalCodec`'s
+`encodeAssetOutcome` is - would be miserable to write and worse to read,
+which is why the dispatching form exists.
+
+Worth stating plainly in the docs so nobody reads it as an invented
+concept. It is a known operation with an unusual surface.
 
 ## Sequencing
 
