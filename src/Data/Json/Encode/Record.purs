@@ -8,7 +8,8 @@ module Data.Json.Encode.Record
 
 import Prelude
 
-import Data.Argonaut.Core (Json, fromObject)
+import Data.Argonaut.Core (fromObject)
+import Data.Json.Encode (EncodeJson, Json, fromFn, toFn)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Foreign.Object (Object)
 import Foreign.Object as Obj
@@ -20,8 +21,13 @@ import Type.Proxy (Proxy(..))
 
 -- | `encodeRecord { name: encodeString } { name: "ada" }` - `rs` is a
 -- | record of per-field encoders, `r` the record of values they apply to.
-encodeRecord :: forall rl rs r. RowToList rs rl => EncodeRecord rl rs r => Record rs -> Record r -> Json
-encodeRecord rs r = fromObject $ gEncodeRecord @rl rs r
+encodeRecord
+  :: forall rl rs r
+   . RowToList rs rl
+  => EncodeRecord rl rs r
+  => Record rs
+  -> EncodeJson (Record r)
+encodeRecord rs = fromFn \r -> fromObject (gEncodeRecord @rl rs r)
 
 -- | Generic derivation for `encodeRecord`, one field at a time via `rl`.
 -- | Not meant to be used directly - go through `encodeRecord`.
@@ -33,7 +39,7 @@ instance EncodeRecord RL.Nil () () where
   gEncodeRecord _ _ = Obj.empty
 
 instance
-  ( Row.Cons sym (a -> Json) rs' rs
+  ( Row.Cons sym (EncodeJson a) rs' rs
   , Row.Cons sym a r' r
   , IsSymbol sym
   , EncodeRecord rl rs' r'
@@ -41,7 +47,7 @@ instance
   , Row.Lacks sym r'
   ) =>
   EncodeRecord (RL.Cons sym _x rl) rs r where
-  gEncodeRecord rs r = Obj.insert fieldName (encode value) tail
+  gEncodeRecord rs r = Obj.insert fieldName (toFn encode value) tail
     where
     fieldName = reflectSymbol (Proxy @sym)
     encode = Record.get (Proxy @sym) rs

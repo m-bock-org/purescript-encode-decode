@@ -13,9 +13,10 @@ module Data.Json.Decode.Record
 
 import Prelude
 
-import Data.Argonaut.Core (Json, toObject)
+import Data.Argonaut.Core (toObject)
 import Data.Argonaut.Decode (getField)
 import Data.Argonaut.Decode.Error (JsonDecodeError(..))
+import Data.Json.Decode (DecodeJson, Json, fromFn, toFn)
 import Data.Either (Either(..))
 import Data.Either as Either
 import Data.Symbol (class IsSymbol, reflectSymbol)
@@ -33,8 +34,13 @@ import Type.Proxy (Proxy(..))
 
 -- | `decodeRecord { name: decodeString } json` - `rs` is a record of
 -- | per-field decoders, matched against `json`'s own keys.
-decodeRecord :: forall rl rs r. RowToList rs rl => DecodeRecord rl rs r => Record rs -> Json -> Either JsonDecodeError (Record r)
-decodeRecord rs json = do
+decodeRecord
+  :: forall rl rs r
+   . RowToList rs rl
+  => DecodeRecord rl rs r
+  => Record rs
+  -> DecodeJson (Record r)
+decodeRecord rs = fromFn \json -> do
   obj <- Either.note (TypeMismatch "Object") (toObject json)
   gDecodeRecord @rl rs obj
 
@@ -48,17 +54,17 @@ instance DecodeRecord RL.Nil () () where
   gDecodeRecord _ _ = pure {}
 
 instance
-  ( Row.Cons sym (Json -> Either JsonDecodeError a) rs' rs
+  ( Row.Cons sym (DecodeJson a) rs' rs
   , Row.Cons sym a r' r
   , IsSymbol sym
   , DecodeRecord rl rs' r'
   , Row.Lacks sym rs'
   , Row.Lacks sym r'
   ) =>
-  DecodeRecord (RL.Cons sym (Json -> Either JsonDecodeError a) rl) rs r where
+  DecodeRecord (RL.Cons sym (DecodeJson a) rl) rs r where
   gDecodeRecord rs obj = do
     field :: Json <- getField obj fieldName
-    parsed <- decode field
+    parsed <- toFn decode field
     tail <- getTail
     pure $ Record.insert (Proxy @sym) parsed tail
     where
@@ -99,7 +105,7 @@ instance
       tail <- getTail
       pure $ Record.insert (Proxy @sym) defaultValue tail
     Right field -> do
-      parsed <- decode field
+      parsed <- toFn decode field
       tail <- getTail
       pure $ Record.insert (Proxy @sym) parsed tail
     where
@@ -123,11 +129,11 @@ instance
 -- | fallback behavior.
 data DecodeWithDefault a = DecodeWithDefault
   { default :: a
-  , decode :: Json -> Either JsonDecodeError a
+  , decode :: DecodeJson a
   }
 
 -- | Build a `DecodeWithDefault` from a default value and a decoder.
-decodeWithDefault :: forall a. a -> (Json -> Either JsonDecodeError a) -> DecodeWithDefault a
+decodeWithDefault :: forall a. a -> DecodeJson a -> DecodeWithDefault a
 decodeWithDefault def dec = DecodeWithDefault { default: def, decode: dec }
 
 -- | The `hmapWithIndex` "props" that pairs each field's plain decoder
@@ -141,7 +147,7 @@ instance decodeDefaultsMapping ::
   ( IsSymbol sym
   , Row.Cons sym a x defs
   ) =>
-  MappingWithIndex (DecodeDefaults defs) (Proxy sym) (Json -> Either JsonDecodeError a) (DecodeWithDefault a) where
+  MappingWithIndex (DecodeDefaults defs) (Proxy sym) (DecodeJson a) (DecodeWithDefault a) where
   mappingWithIndex (DecodeDefaults defs) prop dec = decodeWithDefault (Record.get prop defs) dec
 
 -- | `decodeRecord`, but every field falls back to its corresponding
@@ -156,7 +162,7 @@ instance decodeDefaultsMapping ::
 -- | types rather than requiring every field to share one.
 -- |
 -- | ```purescript
--- | decodeBook :: Json -> Either JsonDecodeError { title :: String, pages :: Int }
+-- | decodeBook :: DecodeJson { title :: String, pages :: Int }
 -- | decodeBook = decodeRecordWithDefaults defaultBook
 -- |   { title: decodeString
 -- |   , pages: decodeInt
@@ -169,6 +175,5 @@ decodeRecordWithDefaults
   => HMapWithIndex (DecodeDefaults defs) (Record rdecs) (Record rdecsd)
   => Record defs
   -> Record rdecs
-  -> Json
-  -> Either JsonDecodeError (Record r)
+  -> DecodeJson (Record r)
 decodeRecordWithDefaults defs decs = decodeRecord (hmapWithIndex (DecodeDefaults defs) decs)

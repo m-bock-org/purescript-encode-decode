@@ -7,6 +7,8 @@ import Data.Generic.Rep (class Generic)
 import Data.Json.Decode (Json, JsonDecodeError(..), decodeInt, decodeString, jsonParser)
 import Data.Json.Decode.Sum (decodeEnum, decodeEnumWith, decodeSum, decodeSumWith)
 import Data.Json.Encode (encodeInt, encodeString, stringify)
+import Data.Json.Encode (toFn) as Encode
+import Data.Json.Decode (toFn) as Decode
 import Data.Json.Encode.Sum (encodeEnum, encodeEnumWith, encodeSum, encodeSumWith)
 import Data.Json.Sum.Encoding (Encoding(..), lowerFirst)
 import Data.Show.Generic (genericShow)
@@ -25,14 +27,14 @@ instance Show Shape where
   show s = genericShow s
 
 encodeShape :: Shape -> Json
-encodeShape = encodeSum
+encodeShape = Encode.toFn $ encodeSum
   { "Blob": unit
   , "Circle": encodeInt
   , "Rect": encodeInt /\ encodeString
   }
 
 decodeShape :: Json -> Either JsonDecodeError Shape
-decodeShape = decodeSum
+decodeShape = Decode.toFn $ decodeSum
   { "Blob": unit
   , "Circle": decodeInt
   , "Rect": decodeInt /\ decodeString
@@ -57,14 +59,14 @@ journalEncoding = EncodeTagged
   }
 
 encodeShapeJournalStyle :: Shape -> Json
-encodeShapeJournalStyle = encodeSumWith journalEncoding
+encodeShapeJournalStyle = Encode.toFn $ encodeSumWith journalEncoding
   { "Blob": unit
   , "Circle": encodeInt
   , "Rect": encodeInt /\ encodeString
   }
 
 decodeShapeJournalStyle :: Json -> Either JsonDecodeError Shape
-decodeShapeJournalStyle = decodeSumWith journalEncoding
+decodeShapeJournalStyle = Decode.toFn $ decodeSumWith journalEncoding
   { "Blob": unit
   , "Circle": decodeInt
   , "Rect": decodeInt /\ decodeString
@@ -75,10 +77,22 @@ decodeShapeJournalStyle = decodeSumWith journalEncoding
 noMatch :: JsonDecodeError
 noMatch = TypeMismatch "no matching constructor"
 
+encodeMode :: Mode -> Json
+encodeMode = Encode.toFn encodeEnum
+
+decodeMode :: Json -> Either JsonDecodeError Mode
+decodeMode = Decode.toFn decodeEnum
+
+encodeModeLower :: Mode -> Json
+encodeModeLower = Encode.toFn (encodeEnumWith lowerFirst)
+
+decodeModeLower :: Json -> Either JsonDecodeError Mode
+decodeModeLower = Decode.toFn (decodeEnumWith lowerFirst)
+
 unsafeParse :: String -> Json
 unsafeParse s = case jsonParser s of
   Right json -> json
-  Left _ -> encodeString ("SumSpec fixture: invalid JSON literal " <> s)
+  Left _ -> Encode.toFn encodeString ("SumSpec fixture: invalid JSON literal " <> s)
 
 spec :: Spec Unit
 spec = do
@@ -130,16 +144,16 @@ spec = do
 
     describe "enum" do
       it "encodes a nullary-only type as a plain string" do
-        stringify (encodeEnum Simulation) `shouldEqual` """"Simulation""""
+        stringify (encodeMode Simulation) `shouldEqual` """"Simulation""""
 
       it "round-trips" do
-        decodeEnum (encodeEnum Realisation) `shouldEqual` Right Realisation
+        decodeMode (encodeMode Realisation) `shouldEqual` Right Realisation
 
       it "applies mapTag in both directions" do
-        stringify (encodeEnumWith lowerFirst Simulation) `shouldEqual` """"simulation""""
-        decodeEnumWith lowerFirst (encodeEnumWith lowerFirst Realisation)
+        stringify (encodeModeLower Simulation) `shouldEqual` """"simulation""""
+        decodeModeLower (encodeModeLower Realisation)
           `shouldEqual` Right Realisation
 
       it "rejects a string that isn't a constructor" do
-        (decodeEnum (encodeString "Nonsense") :: Either JsonDecodeError Mode)
+        decodeMode (Encode.toFn encodeString "Nonsense")
           `shouldSatisfy` isLeft

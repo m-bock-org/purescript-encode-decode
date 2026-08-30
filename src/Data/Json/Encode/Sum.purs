@@ -8,7 +8,7 @@
 -- | data Shape = Circle Number | Rect Number Number | Blob
 -- | derive instance Generic Shape _
 -- |
--- | encodeShape :: Shape -> Json
+-- | encodeShape :: EncodeJson Shape
 -- | encodeShape = encodeSum
 -- |   { "Circle": encodeNumber
 -- |   , "Rect": encodeNumber /\ encodeNumber
@@ -38,7 +38,16 @@ import Prelude
 
 import Data.Array (catMaybes)
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments, Product(..), Sum(..), from)
-import Data.Json.Encode (Json, encodeArray, encodeObject, encodeString)
+import Data.Json.Encode
+  ( EncodeJson
+  , Json
+  , encodeArray
+  , encodeObject
+  , encodeRawJson
+  , encodeString
+  , fromFn
+  , toFn
+  )
 import Data.Json.Sum.Encoding (Encoding(..), defaultEncoding)
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
@@ -53,13 +62,18 @@ import Type.Proxy (Proxy(..))
 ----------------------------------------------------------------------------------------------------
 
 -- | `encodeSumWith` at `defaultEncoding`.
-encodeSum :: forall r rep a. Generic a rep => EncodeCases r rep => Record r -> a -> Json
+encodeSum :: forall r rep a. Generic a rep => EncodeCases r rep => Record r -> EncodeJson a
 encodeSum = encodeSumWith defaultEncoding
 
 -- | `encodeSum` with an explicit wire format - see `Encoding`.
 encodeSumWith
-  :: forall r rep a. Generic a rep => EncodeCases r rep => Encoding -> Record r -> a -> Json
-encodeSumWith encoding r = from >>> gEncodeCases encoding r
+  :: forall r rep a
+   . Generic a rep
+  => EncodeCases r rep
+  => Encoding
+  -> Record r
+  -> EncodeJson a
+encodeSumWith encoding r = fromFn (from >>> gEncodeCases encoding r)
 
 -- | Generic derivation for `encodeSum`, one constructor at a time.
 -- | Not meant to be used directly - go through `encodeSum`.
@@ -76,15 +90,15 @@ instance
     encodeSumCase encoding (reflectSymbol (Proxy @name)) []
 
 else instance
-  ( Row.Cons name (a -> Json) () r
+  ( Row.Cons name (EncodeJson a) () r
   , IsSymbol name
   ) =>
   EncodeCases r (Constructor name (Argument a)) where
   gEncodeCases encoding r (Constructor (Argument x)) =
     let
-      encode = Record.get (Proxy @name) r :: a -> Json
+      encode = Record.get (Proxy @name) r :: EncodeJson a
     in
-      encodeSumCase encoding (reflectSymbol (Proxy @name)) [ encode x ]
+      encodeSumCase encoding (reflectSymbol (Proxy @name)) [ toFn encode x ]
 
 else instance
   ( Row.Cons name encoders () r
@@ -128,8 +142,8 @@ class EncodeFields :: Type -> Type -> Constraint
 class EncodeFields encoders rep where
   gEncodeFields :: encoders -> rep -> Array Json
 
-instance EncodeFields (a -> Json) (Argument a) where
-  gEncodeFields encode (Argument x) = [ encode x ]
+instance EncodeFields (EncodeJson a) (Argument a) where
+  gEncodeFields encode (Argument x) = [ toFn encode x ]
 
 instance
   ( EncodeFields encoder rep
@@ -146,14 +160,18 @@ instance
 -- | For a `data` type whose constructors are *all* nullary: encodes to
 -- | a plain JSON string, not a tagged object. `data Mode = Simulation |
 -- | Realisation` becomes `"Simulation"` / `"Realisation"`.
-encodeEnum :: forall rep a. Generic a rep => EncodeEnum rep => a -> Json
+encodeEnum :: forall rep a. Generic a rep => EncodeEnum rep => EncodeJson a
 encodeEnum = encodeEnumWith identity
 
 -- | `encodeEnum`, with the constructor name rewritten before it hits
 -- | the wire - `lowerFirst`, say.
 encodeEnumWith
-  :: forall rep a. Generic a rep => EncodeEnum rep => (String -> String) -> a -> Json
-encodeEnumWith mapTag = from >>> gEncodeEnum mapTag >>> encodeString
+  :: forall rep a
+   . Generic a rep
+  => EncodeEnum rep
+  => (String -> String)
+  -> EncodeJson a
+encodeEnumWith mapTag = fromFn (from >>> gEncodeEnum mapTag >>> toFn encodeString)
 
 -- | Generic derivation for `encodeEnum`. Not meant to be used directly.
 class EncodeEnum :: Type -> Constraint
@@ -182,17 +200,18 @@ encodeSumCase encoding rawTag jsons = case encoding of
     let
       value = case jsons of
         [ json ] | unwrapSingleArguments -> json
-        many -> encodeArray identity many
+        many -> toFn (encodeArray encodeRawJson) many
     in
-      encodeObject identity (Obj.fromFoldable [ mapTag rawTag /\ value ])
+      toFn (encodeObject encodeRawJson) (Obj.fromFoldable [ mapTag rawTag /\ value ])
 
   EncodeTagged { tagKey, valuesKey, unwrapSingleArguments, omitEmptyArguments, mapTag } ->
     let
-      tagEntry = Just (tagKey /\ encodeString (mapTag rawTag))
+      tagEntry = Just (tagKey /\ toFn encodeString (mapTag rawTag))
 
       valuesEntry = case jsons of
         [] | omitEmptyArguments -> Nothing
         [ json ] | unwrapSingleArguments -> Just (valuesKey /\ json)
-        many -> Just (valuesKey /\ encodeArray identity many)
+        many -> Just (valuesKey /\ toFn (encodeArray encodeRawJson) many)
     in
-      encodeObject identity (Obj.fromFoldable (catMaybes [ tagEntry, valuesEntry ]))
+      toFn (encodeObject encodeRawJson)
+        (Obj.fromFoldable (catMaybes [ tagEntry, valuesEntry ]))
