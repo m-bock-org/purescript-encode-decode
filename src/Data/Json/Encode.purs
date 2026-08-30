@@ -7,20 +7,24 @@
 -- | `EncodeJson` is an opaque newtype rather than an alias for `a ->
 -- | Json`. The point is that a business-logic type's encoder should be
 -- | *composed* out of the combinators here, not written as a function
--- | that reaches into a raw `Json` tree by hand. `fromFn`/`toFn` are the
--- | way out when you genuinely need one; reaching for either is a signal
--- | that a combinator is missing.
+-- | that reaches into a raw `Json` tree by hand. `fromFn` is the one way
+-- | out; reaching for it is a signal that a combinator is missing.
+-- |
+-- | Running an encoder is not an escape hatch, and the `run` prefix marks
+-- | the difference: `runEncode` and `runEncodeToString` *apply* an
+-- | encoder, they are not encoders themselves. Only `fromFn` lets a hand
+-- | written function back *in*.
 module Data.Json.Encode
   ( Json
   , EncodeJson
   , fromFn
-  , toFn
+  , runEncode
   , encodeRawJson
   , Encoded
   , encoded
   , encodeDispatch
-  , encodeToString
-  , encodeToStringWithIndent
+  , runEncodeToString
+  , runEncodeToStringIndented
   , encodeMaybe
   , encodeString
   , encodeNumber
@@ -75,10 +79,17 @@ instance Contravariant EncodeJson where
 fromFn :: forall a. (a -> Json) -> EncodeJson a
 fromFn = EncodeJson
 
--- | Run an encoder. Also the escape hatch *in*: passing `toFn e` where a
--- | plain function is expected.
-toFn :: forall a. EncodeJson a -> a -> Json
-toFn (EncodeJson f) = f
+-- | Run an encoder, down to a `Json`. The counterpart of
+-- | `Data.Json.Decode.runDecode`, and the runner to reach for when a
+-- | `Json` - not a document - is what the caller wants: a value to nest
+-- | inside a larger structure, or to hand to a library that speaks
+-- | `Json` already.
+-- |
+-- | Unlike `fromFn` this is not an escape hatch. It consumes an encoder
+-- | rather than manufacturing one, so it cannot be used to smuggle a
+-- | hand-written `a -> Json` back into the vocabulary.
+runEncode :: forall a. EncodeJson a -> a -> Json
+runEncode (EncodeJson f) = f
 
 -- | The encoder that does nothing: puts an already-built `Json` in
 -- | place. Use it to hand a container combinator contents that are
@@ -119,12 +130,19 @@ encoded (EncodeJson f) a = Encoded (f a)
 encodeDispatch :: forall a. (a -> Encoded) -> EncodeJson a
 encodeDispatch f = EncodeJson \a -> case f a of Encoded json -> json
 
--- | Encode straight to a JSON document. The boundary combinator, and the
--- | mirror of `Data.Json.Decode.decodeFromString`: at the edge where a
--- | `String` is what is wanted - a file to write, a request body - this is
--- | the whole journey, with no intermediate `Json` for a caller to hold.
-encodeToString :: forall a. EncodeJson a -> a -> String
-encodeToString (EncodeJson f) = stringify <<< f
+-- | Run an encoder, all the way to a JSON document.
+-- |
+-- | Named `run` rather than `encode` because it is not a codec - it
+-- | *applies* one. `encodeString`, `encodeRecord` and the rest are values
+-- | of type `EncodeJson a`; this takes one and uses it. Sharing their
+-- | prefix made two different kinds of thing look alike.
+-- |
+-- | The boundary combinator, and the mirror of
+-- | `Data.Json.Decode.runDecodeFromString`: where a `String` is what is wanted - a
+-- | file to write, a request body - this is the whole journey, with no
+-- | intermediate `Json` for a caller to hold.
+runEncodeToString :: forall a. EncodeJson a -> a -> String
+runEncodeToString (EncodeJson f) = stringify <<< f
 
 -- | Private. The encoder that ignores its input and writes `null` - the
 -- | counterpart of `pure` on the decode side, a constant rather than a
@@ -141,9 +159,9 @@ encodeNull = EncodeJson (const jsonNull)
 encodeMaybe :: forall a. EncodeJson a -> EncodeJson (Maybe a)
 encodeMaybe e = encodeDispatch (maybe (encoded encodeNull unit) (encoded e))
 
--- | `encodeToString`, indented for a human to read.
-encodeToStringWithIndent :: forall a. Int -> EncodeJson a -> a -> String
-encodeToStringWithIndent n (EncodeJson f) = Argonaut.stringifyWithIndent n <<< f
+-- | `runEncodeToString`, indented for a human to read.
+runEncodeToStringIndented :: forall a. Int -> EncodeJson a -> a -> String
+runEncodeToStringIndented n (EncodeJson f) = Argonaut.stringifyWithIndent n <<< f
 
 ----------------------------------------------------------------------------------------------------
 -- Primitives
@@ -193,7 +211,7 @@ encodeObject (EncodeJson f) = EncodeJson (Encoders.encodeForeignObject f)
 -- | Encode a `Map k v` as a JSON object, rendering each key to a string.
 encodeMapToObject :: forall k v. (k -> String) -> EncodeJson v -> EncodeJson (Map k v)
 encodeMapToObject keyEncoder valueEncoder =
-  EncodeJson (toFn (encodeTupleArrayToObject keyEncoder valueEncoder) <<< Map.toUnfoldable)
+  EncodeJson (runEncode (encodeTupleArrayToObject keyEncoder valueEncoder) <<< Map.toUnfoldable)
 
 -- | Encode an association list as a JSON object. The shape `Map`
 -- | reduces to, exposed on its own because a wire format is often an
@@ -214,7 +232,7 @@ encodeTupleArrayToObject keyEncoder (EncodeJson encodeValue) =
 ----------------------------------------------------------------------------------------------------
 
 -- | The JSON `null` value - for a field that's genuinely optional rather
--- | than modeled as `Maybe`, e.g. `fromFn (maybe jsonNull (toFn encodeString))`.
+-- | than modeled as `Maybe`, e.g. `fromFn (maybe jsonNull (runEncode encodeString))`.
 jsonNull :: Json
 jsonNull = Argonaut.jsonNull
 

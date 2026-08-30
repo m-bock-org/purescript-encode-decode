@@ -39,7 +39,7 @@ import Data.Json.Decode
   , decodeRawJson
   , decodeString
   , fromFn
-  , toFn
+  , runDecode
   )
 import Data.Json.Sum.Encoding (Encoding(..), defaultEncoding)
 import Data.Maybe (Maybe(..))
@@ -126,7 +126,7 @@ instance
     case payload of
       Nothing -> pure unit
       Just raw -> do
-        values <- jErr (toFn (decodeArray decodeRawJson) raw)
+        values <- jErr (runDecode (decodeArray decodeRawJson) raw)
         when (values /= []) (Left (JErr (TypeMismatch "no constructor arguments")))
     pure (Constructor NoArguments)
 
@@ -139,7 +139,7 @@ else instance
     payload <- lookupCase encoding json (reflectSymbol (Proxy @name))
     value <- singleValue encoding payload
     let decode = Record.get (Proxy @name) r :: DecodeJson a
-    Constructor <<< Argument <$> jErr (toFn decode value)
+    Constructor <<< Argument <$> jErr (runDecode decode value)
 
 else instance
   ( Row.Cons name decoders () r
@@ -190,7 +190,7 @@ class DecodeFields decoders rep where
 
 instance DecodeFields (DecodeJson a) (Argument a) where
   gDecodeFields decode = case _ of
-    [ json ] -> Argument <$> toFn decode json
+    [ json ] -> Argument <$> runDecode decode json
     _ -> Left (TypeMismatch "exactly one constructor argument")
 
 instance
@@ -222,7 +222,7 @@ decodeEnumWith
   => (String -> String)
   -> DecodeJson a
 decodeEnumWith mapTag = fromFn \json -> do
-  tag <- toFn decodeString json
+  tag <- runDecode decodeString json
   case gDecodeEnum mapTag tag of
     Just rep -> Right (to rep)
     Nothing -> Left (UnexpectedValue json)
@@ -255,14 +255,14 @@ instance
 -- | UnmatchedCase` when this isn't that constructor at all.
 lookupCase :: Encoding -> Json -> String -> Either Err (Maybe Json)
 lookupCase encoding json expectedTagRaw = do
-  obj <- jErr (toFn (decodeObject decodeRawJson) json)
+  obj <- jErr (runDecode (decodeObject decodeRawJson) json)
   case encoding of
     EncodeNested { mapTag } ->
       Just <$> note UnmatchedCase (Obj.lookup (mapTag expectedTagRaw) obj)
 
     EncodeTagged { tagKey, valuesKey, mapTag } -> do
       rawTag <- note (JErr (AtKey tagKey MissingValue)) (Obj.lookup tagKey obj)
-      tag <- jErr (toFn decodeString rawTag)
+      tag <- jErr (runDecode decodeString rawTag)
       when (tag /= mapTag expectedTagRaw) (Left UnmatchedCase)
       pure (Obj.lookup valuesKey obj)
 
@@ -274,7 +274,7 @@ singleValue encoding payload = do
   raw <- note (JErr (TypeMismatch "one constructor argument")) payload
   if unwraps then pure raw
   else do
-    values <- jErr (toFn (decodeArray decodeRawJson) raw)
+    values <- jErr (runDecode (decodeArray decodeRawJson) raw)
     case values of
       [ value ] -> pure value
       _ -> Left (JErr (TypeMismatch "exactly one constructor argument"))
@@ -286,4 +286,4 @@ singleValue encoding payload = do
 manyValues :: Maybe Json -> Either Err (Array Json)
 manyValues payload = do
   raw <- note (JErr (TypeMismatch "constructor arguments")) payload
-  jErr (toFn (decodeArray decodeRawJson) raw)
+  jErr (runDecode (decodeArray decodeRawJson) raw)

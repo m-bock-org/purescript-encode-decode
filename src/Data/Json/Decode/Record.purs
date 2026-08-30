@@ -16,7 +16,7 @@ import Prelude
 import Data.Argonaut.Core (toObject)
 import Data.Argonaut.Decode (getField)
 import Data.Argonaut.Decode.Error (JsonDecodeError(..))
-import Data.Json.Decode (DecodeJson, Json, fromFn, toFn)
+import Data.Json.Decode (DecodeJson, Json, fromFn, runDecode)
 import Data.Either (Either(..))
 import Data.Either as Either
 import Data.Symbol (class IsSymbol, reflectSymbol)
@@ -64,7 +64,7 @@ instance
   DecodeRecord (RL.Cons sym (DecodeJson a) rl) rs r where
   gDecodeRecord rs obj = do
     field :: Json <- getField obj fieldName
-    parsed <- toFn decode field
+    parsed <- runDecode decode field
     tail <- getTail
     pure $ Record.insert (Proxy @sym) parsed tail
     where
@@ -105,7 +105,7 @@ instance
       tail <- getTail
       pure $ Record.insert (Proxy @sym) defaultValue tail
     Right field -> do
-      parsed <- toFn decode field
+      parsed <- runDecode decode field
       tail <- getTail
       pure $ Record.insert (Proxy @sym) parsed tail
     where

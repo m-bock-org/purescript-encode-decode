@@ -9,7 +9,7 @@ module Data.Json.Encode.Record
 import Prelude
 
 import Data.Argonaut.Core (fromObject)
-import Data.Json.Encode (EncodeJson, Json, fromFn, toFn)
+import Data.Json.Encode (EncodeJson, Json, fromFn, runEncode)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Foreign.Object (Object)
 import Foreign.Object as Obj
@@ -47,7 +47,7 @@ instance
   , Row.Lacks sym r'
   ) =>
   EncodeRecord (RL.Cons sym _x rl) rs r where
-  gEncodeRecord rs r = Obj.insert fieldName (toFn encode value) tail
+  gEncodeRecord rs r = Obj.insert fieldName (runEncode encode value) tail
     where
     fieldName = reflectSymbol (Proxy @sym)
     encode = Record.get (Proxy @sym) rs

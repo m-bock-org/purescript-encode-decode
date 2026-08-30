@@ -7,8 +7,8 @@ import Data.Generic.Rep (class Generic)
 import Data.Json.Decode (Json, JsonDecodeError(..), decodeInt, decodeString, jsonParser)
 import Data.Json.Decode.Sum (decodeEnum, decodeEnumWith, decodeSum, decodeSumWith)
 import Data.Json.Encode (encodeInt, encodeString, stringify)
-import Data.Json.Encode (toFn) as Encode
-import Data.Json.Decode (toFn) as Decode
+import Data.Json.Encode (runEncode) as Encode
+import Data.Json.Decode (runDecode) as Decode
 import Data.Json.Encode.Sum (encodeEnum, encodeEnumWith, encodeSum, encodeSumWith)
 import Data.Json.Sum.Encoding (Encoding(..), lowerFirst)
 import Data.Show.Generic (genericShow)
@@ -27,14 +27,14 @@ instance Show Shape where
   show s = genericShow s
 
 encodeShape :: Shape -> Json
-encodeShape = Encode.toFn $ encodeSum
+encodeShape = Encode.runEncode $ encodeSum
   { "Blob": unit
   , "Circle": encodeInt
   , "Rect": encodeInt /\ encodeString
   }
 
 decodeShape :: Json -> Either JsonDecodeError Shape
-decodeShape = Decode.toFn $ decodeSum
+decodeShape = Decode.runDecode $ decodeSum
   { "Blob": unit
   , "Circle": decodeInt
   , "Rect": decodeInt /\ decodeString
@@ -59,14 +59,14 @@ journalEncoding = EncodeTagged
   }
 
 encodeShapeJournalStyle :: Shape -> Json
-encodeShapeJournalStyle = Encode.toFn $ encodeSumWith journalEncoding
+encodeShapeJournalStyle = Encode.runEncode $ encodeSumWith journalEncoding
   { "Blob": unit
   , "Circle": encodeInt
   , "Rect": encodeInt /\ encodeString
   }
 
 decodeShapeJournalStyle :: Json -> Either JsonDecodeError Shape
-decodeShapeJournalStyle = Decode.toFn $ decodeSumWith journalEncoding
+decodeShapeJournalStyle = Decode.runDecode $ decodeSumWith journalEncoding
   { "Blob": unit
   , "Circle": decodeInt
   , "Rect": decodeInt /\ decodeString
@@ -78,21 +78,21 @@ noMatch :: JsonDecodeError
 noMatch = TypeMismatch "no matching constructor"
 
 encodeMode :: Mode -> Json
-encodeMode = Encode.toFn encodeEnum
+encodeMode = Encode.runEncode encodeEnum
 
 decodeMode :: Json -> Either JsonDecodeError Mode
-decodeMode = Decode.toFn decodeEnum
+decodeMode = Decode.runDecode decodeEnum
 
 encodeModeLower :: Mode -> Json
-encodeModeLower = Encode.toFn (encodeEnumWith lowerFirst)
+encodeModeLower = Encode.runEncode (encodeEnumWith lowerFirst)
 
 decodeModeLower :: Json -> Either JsonDecodeError Mode
-decodeModeLower = Decode.toFn (decodeEnumWith lowerFirst)
+decodeModeLower = Decode.runDecode (decodeEnumWith lowerFirst)
 
 unsafeParse :: String -> Json
 unsafeParse s = case jsonParser s of
   Right json -> json
-  Left _ -> Encode.toFn encodeString ("SumSpec fixture: invalid JSON literal " <> s)
+  Left _ -> Encode.runEncode encodeString ("SumSpec fixture: invalid JSON literal " <> s)
 
 spec :: Spec Unit
 spec = do
@@ -155,5 +155,5 @@ spec = do
           `shouldEqual` Right Realisation
 
       it "rejects a string that isn't a constructor" do
-        decodeMode (Encode.toFn encodeString "Nonsense")
+        decodeMode (Encode.runEncode encodeString "Nonsense")
           `shouldSatisfy` isLeft

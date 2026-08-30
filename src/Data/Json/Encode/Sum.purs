@@ -46,7 +46,7 @@ import Data.Json.Encode
   , encodeRawJson
   , encodeString
   , fromFn
-  , toFn
+  , runEncode
   )
 import Data.Json.Sum.Encoding (Encoding(..), defaultEncoding)
 import Data.Maybe (Maybe(..))
@@ -98,7 +98,7 @@ else instance
     let
       encode = Record.get (Proxy @name) r :: EncodeJson a
     in
-      encodeSumCase encoding (reflectSymbol (Proxy @name)) [ toFn encode x ]
+      encodeSumCase encoding (reflectSymbol (Proxy @name)) [ runEncode encode x ]
 
 else instance
   ( Row.Cons name encoders () r
@@ -143,7 +143,7 @@ class EncodeFields encoders rep where
   gEncodeFields :: encoders -> rep -> Array Json
 
 instance EncodeFields (EncodeJson a) (Argument a) where
-  gEncodeFields encode (Argument x) = [ toFn encode x ]
+  gEncodeFields encode (Argument x) = [ runEncode encode x ]
 
 instance
   ( EncodeFields encoder rep
@@ -171,7 +171,7 @@ encodeEnumWith
   => EncodeEnum rep
   => (String -> String)
   -> EncodeJson a
-encodeEnumWith mapTag = fromFn (from >>> gEncodeEnum mapTag >>> toFn encodeString)
+encodeEnumWith mapTag = fromFn (from >>> gEncodeEnum mapTag >>> runEncode encodeString)
 
 -- | Generic derivation for `encodeEnum`. Not meant to be used directly.
 class EncodeEnum :: Type -> Constraint
@@ -200,18 +200,18 @@ encodeSumCase encoding rawTag jsons = case encoding of
     let
       value = case jsons of
         [ json ] | unwrapSingleArguments -> json
-        many -> toFn (encodeArray encodeRawJson) many
+        many -> runEncode (encodeArray encodeRawJson) many
     in
-      toFn (encodeObject encodeRawJson) (Obj.fromFoldable [ mapTag rawTag /\ value ])
+      runEncode (encodeObject encodeRawJson) (Obj.fromFoldable [ mapTag rawTag /\ value ])
 
   EncodeTagged { tagKey, valuesKey, unwrapSingleArguments, omitEmptyArguments, mapTag } ->
     let
-      tagEntry = Just (tagKey /\ toFn encodeString (mapTag rawTag))
+      tagEntry = Just (tagKey /\ runEncode encodeString (mapTag rawTag))
 
       valuesEntry = case jsons of
         [] | omitEmptyArguments -> Nothing
         [ json ] | unwrapSingleArguments -> Just (valuesKey /\ json)
-        many -> Just (valuesKey /\ toFn (encodeArray encodeRawJson) many)
+        many -> Just (valuesKey /\ runEncode (encodeArray encodeRawJson) many)
     in
-      toFn (encodeObject encodeRawJson)
+      runEncode (encodeObject encodeRawJson)
         (Obj.fromFoldable (catMaybes [ tagEntry, valuesEntry ]))

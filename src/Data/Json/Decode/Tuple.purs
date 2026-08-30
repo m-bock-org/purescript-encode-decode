@@ -29,7 +29,7 @@ import Data.Json.Decode
   , decodeArray
   , decodeRawJson
   , fromFn
-  , toFn
+  , runDecode
   )
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested (type (/\), (/\))
@@ -60,7 +60,7 @@ instance
     case Array.uncons jsons of
       Nothing -> Left (AtIndex index MissingValue)
       Just { head, tail } -> do
-        value <- lmap (AtIndex index) (toFn decodeHead head)
+        value <- lmap (AtIndex index) (runDecode decodeHead head)
         rest <- gDecodeTupleParts (index + 1) decodeRest tail
         pure (value /\ rest)
 
@@ -68,5 +68,5 @@ else instance DecodeTupleParts (DecodeJson a) a where
   gDecodeTupleParts index decodeLast jsons = case Array.uncons jsons of
     Nothing -> Left (AtIndex index MissingValue)
     Just { head, tail }
-      | Array.length tail == 0 -> lmap (AtIndex index) (toFn decodeLast head)
+      | Array.length tail == 0 -> lmap (AtIndex index) (runDecode decodeLast head)
       | otherwise -> Left (TypeMismatch (show (index + 1) <> "-element array"))

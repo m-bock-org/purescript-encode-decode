@@ -23,7 +23,7 @@ import Prelude
 
 import Data.Array (cons) as Array
 import Data.Functor.Contravariant (cmap)
-import Data.Json.Encode (EncodeJson, Json, encodeArray, encodeRawJson, toFn)
+import Data.Json.Encode (EncodeJson, Json, encodeArray, encodeRawJson, runEncode)
 import Data.Tuple.Nested (type (/\), (/\))
 
 -- | `encodeTuple (encodeString /\ encodeInt)` - the value tuple's type
@@ -50,7 +50,7 @@ instance
   EncodeTupleParts erest trest =>
   EncodeTupleParts (EncodeJson a /\ erest) (a /\ trest) where
   gEncodeTupleParts (encodeHead /\ encodeRest) (head /\ rest) =
-    Array.cons (toFn encodeHead head) (gEncodeTupleParts encodeRest rest)
+    Array.cons (runEncode encodeHead head) (gEncodeTupleParts encodeRest rest)
 
 else instance EncodeTupleParts (EncodeJson a) a where
-  gEncodeTupleParts encodeLast last = [ toFn encodeLast last ]
+  gEncodeTupleParts encodeLast last = [ runEncode encodeLast last ]
