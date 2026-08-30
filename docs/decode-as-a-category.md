@@ -93,6 +93,37 @@ tick-duck's `JournalLine` stops being a special case - it is a plain
 That leaves `decodeFail` (`Decode (const (Left e))`) as very nearly the
 only irreducible addition on the decode side.
 
+## Why this level and not another
+
+Bare functions are too little structure. `Json -> Either err a` has no
+laws to lean on and nothing to compose through, which is why every
+project that starts there grows its own ad-hoc combinator for
+"decode-then-narrow" - and why the escape hatches had to be banned by a
+lint rule rather than by the type.
+
+A bidirectional codec framework is too much. One value carrying both
+directions, profunctor optics, free applicatives, generic derivation
+everywhere: powerful, and paid for in type errors nobody can read and a
+vocabulary someone has to learn before they can follow a decoder.
+
+`Decode a b` sits between. It is a newtype with instances that already
+exist in everyone's head - `>>>`, `map`, `do` - applied to a domain type.
+Nothing new to learn, and the structure is enough to compose through.
+
+The test it passes: **one type parameter buys four things.**
+
+- `decodeRefine` stops existing; it was `>>>` with a name.
+- `decodeRawJson` stops existing; it was `identity`.
+- The `decodeDecimalFromString` naming convention stops being needed;
+  the composition says it.
+- Refinements become reusable values rather than functions that happen
+  to fit a combinator's hole.
+
+That ratio is the whole argument. An abstraction earning its keep four
+times over is a different proposition from one earning it once - compare
+the `OhlcPart` sum that was tried and reverted the same day, which
+invented two concepts to hide one endpoint's quirk and paid for neither.
+
 ## Costs
 
 **Type synonyms cannot be partially applied in PureScript.**
