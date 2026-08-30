@@ -114,7 +114,11 @@ third parameter cuts against the reason for preferring a domain newtype
 to `Star`: readable type errors.
 
 **Resolution: parameterise it, alias it away, and keep one error type in
-practice.** The parameter costs nothing while unused, because the alias
+practice.** The parameter is not there to be used - in this codebase it
+will be `JsonDecodeError` everywhere. It is there so the general type
+does not lie: a decode from `a` to `b` has no business knowing that
+failures are about JSON, and that they always are here is a fact about
+our usage rather than about the abstraction. The parameter costs nothing while unused, because the alias
 hides it at every call site and the instances are ordinary partial
 applications - `Semigroupoid (Decode e)`, `Functor (Decode e a)`. But
 the door stays open, and closing it later means changing the type
