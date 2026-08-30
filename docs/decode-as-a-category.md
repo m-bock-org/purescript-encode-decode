@@ -1,6 +1,32 @@
-# Decode as a category
+# Decode as a category - decided against
 
-Status: proposed, not implemented. Agreed in principle 2026-08-30.
+**Status: declined 2026-08-30.** Considered in full, agreed in
+principle, and then dropped. `DecodeJson a` stays a one-parameter
+newtype over `Json -> Either JsonDecodeError a`, and this document is
+kept as the record of why the alternative was not taken - so it does not
+get re-proposed from scratch.
+
+**What stays, permanently rather than provisionally:**
+
+- `decodeRefine` keeps both arguments. It was going to lose one to
+  `>>>`, which would have taken over the composing while a one-argument
+  `refine` kept the lifting.
+- `decodeRawJson` stays a primitive. It was going to become `identity`.
+- `cmap` stays on the encode side. It was going to become `lmap` from
+  `Profunctor`.
+- **The `decodeDecimalString` naming exemption stays.** This is the one
+  consequence worth naming explicitly, because the argument for dropping
+  the naming convention depended on this design: `decodeString >>>
+  refine decimalFromString` says "from string" in the expression, so no
+  name has to carry it. Without `>>>` there is no expression to read it
+  off, and a codec named for the format it reads rather than the type it
+  produces needs the exemption in `Lint.purs` to stay.
+
+The analysis below stands on its own merits and is unchanged; only the
+decision went the other way. The `Star` section and the `encodeDispatch`
+naming section were never contingent on it.
+
+---
 
 ## The problem
 
