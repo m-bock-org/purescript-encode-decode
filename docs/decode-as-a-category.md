@@ -93,6 +93,40 @@ tick-duck's `JournalLine` stops being a special case - it is a plain
 That leaves `decodeFail` (`Decode (const (Left e))`) as very nearly the
 only irreducible addition on the decode side.
 
+## The error should be a parameter too
+
+```purescript
+newtype Decode e a b = Decode (a -> Either e b)
+
+type DecodeJson a = Decode JsonDecodeError Json a
+```
+
+The argument for it is the refinements this whole design exists to make
+first-class. `decimalFromString` fails because a string is not a decimal,
+which has nothing to do with JSON - and yet with the error fixed it must
+fabricate a `TypeMismatch` to fit the hole. Fixing the error type makes
+every refinement lie about why it failed.
+
+The argument against is that `Semigroupoid (Decode e)` composes only
+within one `e`, so two stages with different errors need an explicit
+map - friction landing exactly where the elegance was meant to be. And a
+third parameter cuts against the reason for preferring a domain newtype
+to `Star`: readable type errors.
+
+**Resolution: parameterise it, alias it away, and keep one error type in
+practice.** The parameter costs nothing while unused, because the alias
+hides it at every call site and the instances are ordinary partial
+applications - `Semigroupoid (Decode e)`, `Functor (Decode e a)`. But
+the door stays open, and closing it later means changing the type
+everything depends on.
+
+The friction argument also partly inverts on inspection. That explicit
+map at a boundary is a feature: if a decimal-parse failure becomes a JSON
+decode error, something has to decide how, and today that translation
+happens silently inside whichever function needed it. Making it a named
+step at the point of use is the same reasoning as naming the three states
+of an envelope rather than nesting `Maybe` and `Either`.
+
 ## Why this level and not another
 
 Bare functions are too little structure. `Json -> Either err a` has no
