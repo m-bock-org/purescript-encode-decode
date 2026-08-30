@@ -21,7 +21,6 @@ module Data.Json.Encode
   , encodeDispatch
   , encodeToString
   , encodeToStringWithIndent
-  , encodeNull
   , encodeMaybe
   , encodeString
   , encodeNumber
@@ -128,9 +127,11 @@ encodeDispatch f = EncodeJson \a -> case f a of Encoded json -> json
 encodeToString :: forall a. EncodeJson a -> a -> String
 encodeToString (EncodeJson f) = stringify <<< f
 
--- | The encoder that ignores its input and writes `null`. The
--- | counterpart of `pure` on the decode side: a constant, not a reading
--- | of anything.
+-- | Private. The encoder that ignores its input and writes `null` - the
+-- | counterpart of `pure` on the decode side, a constant rather than a
+-- | reading of anything. Not exported: `encodeMaybe` is the shape callers
+-- | actually want, and a bare null-writer invites using it where an
+-- | absent key would be the better wire format.
 encodeNull :: forall a. EncodeJson a
 encodeNull = EncodeJson (const jsonNull)
 

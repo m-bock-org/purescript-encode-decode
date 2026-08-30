@@ -34,7 +34,7 @@ import Data.Json.Encode
   , stringify
   )
 import Data.Json.Encode (toFn) as Encode
-import Data.Json.Encode (encodeDispatch, encodeMaybe, encodeNull, encodeToString, encoded) as E
+import Data.Json.Encode (encodeDispatch, encodeMaybe, encodeToString, encoded) as E
 import Data.Json.Encode.Record (encodeRecord)
 import Data.Json.Encode.Tuple (encodeTuple)
 import Data.Map as Map
@@ -316,6 +316,3 @@ spec = do
     it "nests inside a record like any other field encoder" do
       E.encodeToString (encodeRecord { a: E.encodeMaybe encodeInt }) { a: Nothing }
         `shouldEqual` """{"a":null}"""
-
-    it "encodeNull ignores whatever it is given" do
-      E.encodeToString (E.encodeNull :: EncodeJson String) "anything" `shouldEqual` "null"
