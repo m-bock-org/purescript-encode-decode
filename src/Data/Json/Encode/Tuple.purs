@@ -8,10 +8,11 @@
 -- | encodeRow = encodeTuple (encodeString /\ encodeInt /\ encodeBoolean)
 -- | ```
 -- |
--- | `["ada", 3, true]`. Two encoders is the same thing
--- | `Data.Json.Encode.encodeNativeTuple2` does; this generalises it to
--- | any length, and to nesting, since a tuple of encoders is itself an
--- | encoder-shaped value.
+-- | encodes to `["ada", 3, true]`.
+-- |
+-- | Any length, including two - a pair needs no special case. And it
+-- | nests, because a tuple of encoders is itself an encoder-shaped
+-- | value.
 module Data.Json.Encode.Tuple
   ( encodeTuple
   , class EncodeTupleParts

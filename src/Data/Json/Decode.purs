@@ -28,7 +28,6 @@ module Data.Json.Decode
   , decodeArray
   , decodeObject
   , decodeObjectWithKey
-  , decodeNativeTuple2
   , decodeMapFromObject
   , decodeTupleArrayFromObject
   , jsonParser
@@ -199,13 +198,6 @@ decodeObjectWithKey f = DecodeJson \json -> do
 ----------------------------------------------------------------------------------------------------
 -- Tuple
 ----------------------------------------------------------------------------------------------------
-
--- | Decode a 2-element JSON array as a native tuple `a /\ b` - for a
--- | *fixed-length* array where each position has its own type, unlike
--- | `decodeArray`'s variable-length array of one uniform type. See
--- | `Data.Json.Decode.Tuple.decodeTuple` for arbitrary lengths.
-decodeNativeTuple2 :: forall a b. DecodeJson a -> DecodeJson b -> DecodeJson (a /\ b)
-decodeNativeTuple2 (DecodeJson f) (DecodeJson g) = DecodeJson (Decoders.decodeTuple f g)
 
 ----------------------------------------------------------------------------------------------------
 -- Map

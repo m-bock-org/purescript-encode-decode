@@ -11,7 +11,6 @@ import Data.Json.Decode
   , decodeBoolean
   , decodeInt
   , decodeMapFromObject
-  , decodeNativeTuple2
   , decodeNumber
   , decodeObject
   , decodeString
@@ -27,7 +26,6 @@ import Data.Json.Encode
   , encodeBoolean
   , encodeInt
   , encodeMapToObject
-  , encodeNativeTuple2
   , encodeObject
   , encodeString
   , encodeTupleArrayToObject
@@ -118,12 +116,12 @@ spec = do
 
     describe "tuple" do
       it "round-trips a 2-tuple as a JSON array" do
-        Decode.toFn (decodeNativeTuple2 decodeString decodeInt)
-          (Encode.toFn (encodeNativeTuple2 encodeString encodeInt) ("a" /\ 1))
+        Decode.toFn (decodeTuple (decodeString /\ decodeInt))
+          (Encode.toFn (encodeTuple (encodeString /\ encodeInt)) ("a" /\ 1))
           `shouldEqual` Right ("a" /\ 1)
 
       it "rejects an array of the wrong length" do
-        Decode.toFn (decodeNativeTuple2 decodeString decodeInt)
+        Decode.toFn (decodeTuple (decodeString /\ decodeInt))
           (Encode.toFn (encodeArray encodeInt) [ 1, 2, 3 ])
           `shouldSatisfy` isLeft
 
@@ -163,12 +161,6 @@ spec = do
           `shouldEqual` """["1","2"]"""
         stringify (Encode.toFn (encodeTuple (encodeInt /\ encodeInt)) (1 /\ 2))
           `shouldEqual` """[1,2]"""
-
-      it "agrees with encodeNativeTuple2 at two positions" do
-        let value = "a" /\ 1
-        stringify (Encode.toFn (encodeTuple (encodeString /\ encodeInt)) value)
-          `shouldEqual`
-            stringify (Encode.toFn (encodeNativeTuple2 encodeString encodeInt) value)
 
     describe "n-tuple" do
       it "round-trips a 2-tuple" do

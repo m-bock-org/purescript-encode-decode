@@ -28,7 +28,6 @@ module Data.Json.Encode
   , encodeBoolean
   , encodeArray
   , encodeObject
-  , encodeNativeTuple2
   , encodeMapToObject
   , encodeTupleArrayToObject
   , jsonNull
@@ -186,11 +185,6 @@ encodeObject (EncodeJson f) = EncodeJson (Encoders.encodeForeignObject f)
 ----------------------------------------------------------------------------------------------------
 -- Tuple
 ----------------------------------------------------------------------------------------------------
-
--- | Encode a native tuple `a /\ b` as a 2-element JSON array. See
--- | `Data.Json.Encode.Tuple.encodeTuple` for arbitrary lengths.
-encodeNativeTuple2 :: forall a b. EncodeJson a -> EncodeJson b -> EncodeJson (a /\ b)
-encodeNativeTuple2 (EncodeJson f) (EncodeJson g) = EncodeJson (Encoders.encodeTuple f g)
 
 ----------------------------------------------------------------------------------------------------
 -- Map
