@@ -21,6 +21,8 @@ module Data.Json.Encode
   , encodeDispatch
   , encodeToString
   , encodeToStringWithIndent
+  , encodeNull
+  , encodeMaybe
   , encodeString
   , encodeNumber
   , encodeInt
@@ -40,6 +42,7 @@ import Data.Argonaut.Core as Argonaut
 import Data.Argonaut.Encode.Encoders as Encoders
 import Data.Functor.Contravariant (class Contravariant)
 import Data.Map (Map)
+import Data.Maybe (Maybe, maybe)
 import Data.Map as Map
 import Data.Tuple.Nested (type (/\), (/\))
 import Foreign.Object (Object)
@@ -124,6 +127,19 @@ encodeDispatch f = EncodeJson \a -> case f a of Encoded json -> json
 -- | the whole journey, with no intermediate `Json` for a caller to hold.
 encodeToString :: forall a. EncodeJson a -> a -> String
 encodeToString (EncodeJson f) = stringify <<< f
+
+-- | The encoder that ignores its input and writes `null`. The
+-- | counterpart of `pure` on the decode side: a constant, not a reading
+-- | of anything.
+encodeNull :: forall a. EncodeJson a
+encodeNull = EncodeJson (const jsonNull)
+
+-- | `Nothing` becomes `null`, `Just` becomes the value. The other
+-- | convention - omitting the key entirely - is a property of the record
+-- | the field sits in, not of the value, so it lives in
+-- | `Data.Json.Encode.Record` instead.
+encodeMaybe :: forall a. EncodeJson a -> EncodeJson (Maybe a)
+encodeMaybe e = encodeDispatch (maybe (encoded encodeNull unit) (encoded e))
 
 -- | `encodeToString`, indented for a human to read.
 encodeToStringWithIndent :: forall a. Int -> EncodeJson a -> a -> String

@@ -22,7 +22,8 @@ import Data.Json.Decode (decodeAttempt, decodeFail, decodeFromString, decodeObje
 import Data.Json.Decode.Record (decodeRecord)
 import Data.Json.Decode.Tuple (decodeTuple)
 import Data.Json.Encode
-  ( encodeArray
+  ( EncodeJson
+  , encodeArray
   , encodeBoolean
   , encodeInt
   , encodeMapToObject
@@ -33,10 +34,11 @@ import Data.Json.Encode
   , stringify
   )
 import Data.Json.Encode (toFn) as Encode
-import Data.Json.Encode (encodeDispatch, encodeToString, encoded) as E
+import Data.Json.Encode (encodeDispatch, encodeMaybe, encodeNull, encodeToString, encoded) as E
 import Data.Json.Encode.Record (encodeRecord)
 import Data.Json.Encode.Tuple (encodeTuple)
 import Data.Map as Map
+import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested ((/\))
 import Foreign.Object as Object
 import Test.Spec (Spec, describe, it)
@@ -305,3 +307,15 @@ spec = do
       let codec = { enc: encodeRecord { a: encodeInt }, dec: decodeRecord { a: decodeInt } }
       D.decodeFromString codec.dec (E.encodeToString codec.enc { a: 42 })
         `shouldEqual` Right { a: 42 }
+
+  describe "encodeNull / encodeMaybe" do
+    it "writes null for Nothing and the value for Just" do
+      E.encodeToString (E.encodeMaybe encodeInt) (Just 1) `shouldEqual` "1"
+      E.encodeToString (E.encodeMaybe encodeInt) (Nothing :: Maybe Int) `shouldEqual` "null"
+
+    it "nests inside a record like any other field encoder" do
+      E.encodeToString (encodeRecord { a: E.encodeMaybe encodeInt }) { a: Nothing }
+        `shouldEqual` """{"a":null}"""
+
+    it "encodeNull ignores whatever it is given" do
+      E.encodeToString (E.encodeNull :: EncodeJson String) "anything" `shouldEqual` "null"
