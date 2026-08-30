@@ -65,21 +65,42 @@ unaffected.
 
 ### What falls out
 
-**`decodeRefine` stops existing.** It was Kleisli composition with a
-name:
+**`decodeRefine` loses an argument.** It was doing two jobs at once -
+lifting a failing function into a decoder, and composing the result onto
+an existing one. `>>>` takes the second job:
 
 ```purescript
-decodeEuros = decodeRecord { euro: decodeString } >>> eurosFromRep
+decodeEuros = decodeRecord { euro: decodeString } >>> refine eurosFromRep
 ```
 
+It does *not* take the first. `>>>` composes two `Decode`s; it cannot
+turn a plain `a -> Either e b` into one, and the only other thing that
+can is `fromFn`, which is banned in tick-duck. So the lift stays, with
+one argument instead of two:
+
+```purescript
+refine :: forall e a b. (a -> Either e b) -> Decode e a b
+refine f = identity >>= either decodeFail pure <<< f
+```
+
+`Category` supplies `identity :: Decode e a a`, `Monad` extends it along
+the output, `decodeFail` supplies the failure. No privileged access, so
+`refine` is derived rather than primitive - but it is worth exporting
+under a name, because it is what stands where `fromFn` would otherwise
+be reached for. That is the whole reason the ban holds.
+
+The call site also ends up in the right order. `decodeRefine f d` puts
+the refinement before the decoder it extends; `d >>> refine f` reads the
+way the data flows.
+
 **Refinements become values, and stop being JSON-specific.**
-`decimalFromString :: Decode String NonNegativeDecimal` is useful
-wherever a string arrives, not only under a JSON decoder.
+`refine decimalFromString :: Decode e String NonNegativeDecimal` is
+useful wherever a string arrives, not only under a JSON decoder.
 
 **The naming convention becomes unnecessary.**
 
 ```purescript
-decodeDecimal = decodeString >>> decimalFromString
+decodeDecimal = decodeString >>> refine decimalFromString
 ```
 
 "From string" is in the expression. Nothing has to be encoded in a name,
@@ -150,7 +171,8 @@ Nothing new to learn, and the structure is enough to compose through.
 
 The test it passes: **one type parameter buys four things.**
 
-- `decodeRefine` stops existing; it was `>>>` with a name.
+- `decodeRefine` loses an argument: `>>>` takes over the composing, and
+  a one-argument `refine` keeps the lifting that `>>>` cannot do.
 - `decodeRawJson` stops existing; it was `identity`.
 - The `decodeDecimalFromString` naming convention stops being needed;
   the composition says it.
@@ -179,8 +201,9 @@ type EncodeJson a = Encode a Json
 
 `Encode a b` is a newtype over `Function`, so `Semigroupoid`/`Category`
 are ordinary function composition and `Profunctor` supplies `lmap` -
-which is what `cmap` is today. So `cmap` retires alongside
-`decodeRefine`:
+which is what `cmap` is today. So `cmap` retires - and unlike
+`decodeRefine` it retires outright, because an encoder cannot fail and
+so needs no lift to match `refine`:
 
     encodeDecimal = lmap toDecimalString encodeString
 
@@ -195,7 +218,7 @@ opacity the escape-hatch ban depends on.
 
 **Migration.** Signatures are untouched thanks to the alias. What changes
 is `decodeRefine`'s call sites (about fifteen in tick-duck), each
-becoming `>>>`. Mechanical, and only after the type exists.
+becoming `>>> refine`. Mechanical, and only after the type exists.
 
 ## Decided against: `Star (Either JsonDecodeError)`
 
