@@ -14,6 +14,13 @@
         pkgs = nixpkgs.legacyPackages.${system};
         lib = al-dente.lib.${system};
 
+        # What the editor runs, so it never reaches for a globally
+        # installed compiler or the one under node_modules.
+        toolchain = pkgs.symlinkJoin {
+          name = "toolchain";
+          paths = [ lib.defaults.purs lib.defaults.spago lib.defaults.purs-tidy ];
+        };
+
         workspace = lib.mkWorkspace {
           src = ./.;
           name = "encode-decode";
@@ -25,10 +32,7 @@
 
         # What the editor runs, so it never reaches for a globally
         # installed compiler or the one under node_modules.
-        packages.toolchain = pkgs.symlinkJoin {
-          name = "toolchain";
-          paths = [ lib.defaults.purs lib.defaults.spago lib.defaults.purs-tidy ];
-        };
+        packages.toolchain = toolchain;
 
         checks = {
           # The spec suite, run from the store.
@@ -50,6 +54,11 @@
           # outside it, `purs` is whatever is installed globally.
           shellHook = ''
             case $- in *i*) export PS1="(encode-decode) $PS1" ;; esac
+
+            # Point the editor at this exact toolchain, refreshed on every
+            # entry so it cannot go stale against the flake. The .vscode
+            # wrappers read this symlink and then need no nix at all.
+            ln -sfn ${toolchain} .vscode/.toolchain
           '';
 
           packages = [
