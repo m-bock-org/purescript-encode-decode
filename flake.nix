@@ -5,7 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
 
-    al-dente.url = "git+ssh://git@github-al-dente/m-bock/al-dente";
+    al-dente.url = "git+ssh://git@github.com/m-bock/al-dente";
   };
 
   outputs = { self, nixpkgs, flake-utils, al-dente, ... }:
