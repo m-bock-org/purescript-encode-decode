@@ -35,24 +35,3 @@ workspace:
     lint-purs:
       git: https://github.com/m-bock/purescript-lint.git
       ref: a047b117fe376b60402beb794da3cfae5366e994
-      dependencies:
-        - aff
-        - arrays
-        - console
-        - effect
-        - either
-        - encode-decode
-        - foldable-traversable
-        - foreign-object
-        - language-cst-parser
-        - maybe
-        - node-buffer
-        - node-child-process
-        - node-fs
-        - node-glob-basic
-        - node-path
-        - ordered-collections
-        - prelude
-        - strings
-        - transformers
-        - tuples
