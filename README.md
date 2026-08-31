@@ -1,5 +1,7 @@
 # purescript-encode-decode
 
+[![CI](https://github.com/m-bock/purescript-encode-decode/actions/workflows/ci.yml/badge.svg)](https://github.com/m-bock/purescript-encode-decode/actions/workflows/ci.yml)
+
 Plain, explicit JSON encode/decode functions for PureScript - no
 typeclass-based `decodeJson`. Depend on this alone - never import
 Argonaut directly.
