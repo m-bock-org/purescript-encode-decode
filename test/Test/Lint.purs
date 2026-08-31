@@ -9,8 +9,8 @@ import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
 import Node.Process (exit')
-import PureScript.Lint (runLinter)
-import PureScript.Lint.RuleSet (Rule)
+import Lint (runLinter)
+import Lint.RuleSet (Rule)
 
 rules :: Array Rule
 rules = []

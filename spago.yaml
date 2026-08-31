@@ -34,7 +34,7 @@ workspace:
   extraPackages:
     lint-purs:
       git: https://github.com/m-bock/purescript-lint.git
-      ref: 6e4a35fb056aedbd670c49e46c9a18d98f19040d
+      ref: a071c5719e1a198ac0873257c681eddcb59a53cd
       dependencies:
         - aff
         - arrays
