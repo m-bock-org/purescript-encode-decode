@@ -20,17 +20,7 @@ import Data.Json.Decode (runDecode) as Decode
 import Data.Json.Decode (decodeAttempt, decodeFail, runDecodeFromString, decodeObjectWithKey, decodeRefine) as D
 import Data.Json.Decode.Record (decodeRecord)
 import Data.Json.Decode.Tuple (decodeTuple)
-import Data.Json.Encode
-  ( EncodeJson
-  , encodeArray
-  , encodeBoolean
-  , encodeInt
-  , encodeMapToObject
-  , encodeObject
-  , encodeString
-  , encodeTupleArrayToObject
-  , stringify
-  )
+import Data.Json.Encode (encodeArray, encodeBoolean, encodeInt, encodeMapToObject, encodeObject, encodeString, encodeTupleArrayToObject, stringify)
 import Data.Json.Encode (runEncode) as Encode
 import Data.Json.Encode (encodeDispatch, encodeMaybe, runEncodeToString, encoded) as E
 import Data.Json.Encode.Record (encodeRecord)

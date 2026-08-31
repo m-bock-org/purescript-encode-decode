@@ -19,7 +19,6 @@ module Data.Json.Encode.Tuple
   , gEncodeTupleParts
   ) where
 
-import Prelude
 
 import Data.Array (cons) as Array
 import Data.Functor.Contravariant (cmap)

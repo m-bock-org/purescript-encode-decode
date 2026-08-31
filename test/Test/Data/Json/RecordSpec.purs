@@ -5,7 +5,7 @@ import Prelude
 import Data.Argonaut.Core (Json, fromObject, jsonNull)
 import Data.Argonaut.Decode.Decoders (decodeMaybe)
 import Data.Either (Either(..), isLeft)
-import Data.Json.Decode (decodeInt, decodeString, fromFn)
+import Data.Json.Decode (DecodeJson, decodeInt, decodeString, fromFn)
 import Data.Json.Decode (runDecode) as Decode
 import Data.Json.Decode.Record (decodeRecord, decodeRecordWithDefaults)
 import Data.Json.Encode (encodeInt, encodeString)
@@ -25,7 +25,7 @@ objectWith key value = fromObject (Object.singleton key value)
 -- | Argonaut's own `decodeMaybe` is still a plain function, so it needs
 -- | wrapping to sit in a record of `DecodeJson`s - exactly the boundary
 -- | `fromFn` exists for.
-decodeMaybeString :: _
+decodeMaybeString :: DecodeJson (Maybe String)
 decodeMaybeString = fromFn (decodeMaybe (Decode.runDecode decodeString))
 
 spec :: Spec Unit

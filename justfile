@@ -2,7 +2,7 @@ export PATH := justfile_directory() / "node_modules/.bin:" + env_var('PATH')
 set shell := ["bash", "-c"]
 
 build:
-    spago build
+    spago build --strict
 
 test:
     spago test
