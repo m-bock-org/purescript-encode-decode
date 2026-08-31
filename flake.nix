@@ -44,6 +44,14 @@
 
         devShells.default = pkgs.mkShell {
           name = "encode-decode";
+
+          # A marker that you are inside the dev shell. `nix develop` used
+          # to do this itself and stopped, and the difference matters:
+          # outside it, `purs` is whatever is installed globally.
+          shellHook = ''
+            case $- in *i*) export PS1="NIX:$PS1" ;; esac
+          '';
+
           packages = [
             lib.defaults.purs
             lib.defaults.spago

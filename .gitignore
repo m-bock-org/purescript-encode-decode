@@ -11,3 +11,4 @@ dep-docs/
 .psa*
 .spago
 .spec-results
+.vscode/.toolchain
