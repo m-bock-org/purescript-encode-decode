@@ -19,13 +19,40 @@ package:
   test:
     main: Test.Main
     dependencies:
+      - aff
       - effect
       - either
+      - lint-purs
       - maybe
+      - node-process
       - spec
       - spec-node
       - tuples
 workspace:
   packageSet:
     registry: 78.0.0
-  extraPackages: {}
+  extraPackages:
+    lint-purs:
+      git: https://github.com/m-bock/purescript-lint.git
+      ref: 6e4a35fb056aedbd670c49e46c9a18d98f19040d
+      dependencies:
+        - aff
+        - arrays
+        - console
+        - effect
+        - either
+        - encode-decode
+        - foldable-traversable
+        - foreign-object
+        - language-cst-parser
+        - maybe
+        - node-buffer
+        - node-child-process
+        - node-fs
+        - node-glob-basic
+        - node-path
+        - ordered-collections
+        - prelude
+        - strings
+        - transformers
+        - tuples

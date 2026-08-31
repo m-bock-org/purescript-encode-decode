@@ -23,9 +23,12 @@
         },
         "test": {
           "dependencies": [
+            "aff",
             "effect",
             "either",
+            "lint-purs",
             "maybe",
+            "node-process",
             "spec",
             "spec-node",
             "tuples"
@@ -682,7 +685,34 @@
         "zipperarray": "2.0.0"
       }
     },
-    "extra_packages": {}
+    "extra_packages": {
+      "lint-purs": {
+        "git": "https://github.com/m-bock/purescript-lint.git",
+        "ref": "6e4a35fb056aedbd670c49e46c9a18d98f19040d",
+        "dependencies": [
+          "aff",
+          "arrays",
+          "console",
+          "effect",
+          "either",
+          "encode-decode",
+          "foldable-traversable",
+          "foreign-object",
+          "language-cst-parser",
+          "maybe",
+          "node-buffer",
+          "node-child-process",
+          "node-fs",
+          "node-glob-basic",
+          "node-path",
+          "ordered-collections",
+          "prelude",
+          "strings",
+          "transformers",
+          "tuples"
+        ]
+      }
+    }
   },
   "packages": {
     "aff": {
@@ -822,6 +852,15 @@
         "prelude",
         "tuples",
         "unfoldable"
+      ]
+    },
+    "console": {
+      "type": "registry",
+      "version": "6.1.0",
+      "integrity": "sha256-3T5PPz1mATZmV0C4GzkCkpLlCa5xG7u8ZNgnLrrrI1Q=",
+      "dependencies": [
+        "effect",
+        "prelude"
       ]
     },
     "const": {
@@ -1144,6 +1183,39 @@
         "prelude"
       ]
     },
+    "language-cst-parser": {
+      "type": "registry",
+      "version": "0.14.1",
+      "integrity": "sha256-tnue0oM2/EmyNJmLoJDnmUDfinKLJHi2fcSGt7d6ewU=",
+      "dependencies": [
+        "arrays",
+        "const",
+        "control",
+        "either",
+        "enums",
+        "foldable-traversable",
+        "free",
+        "functions",
+        "functors",
+        "identity",
+        "integers",
+        "lazy",
+        "lists",
+        "maybe",
+        "newtype",
+        "numbers",
+        "ordered-collections",
+        "partial",
+        "prelude",
+        "st",
+        "strings",
+        "transformers",
+        "tuples",
+        "typelevel-prelude",
+        "unfoldable",
+        "unsafe-coerce"
+      ]
+    },
     "lazy": {
       "type": "registry",
       "version": "6.0.0",
@@ -1153,6 +1225,33 @@
         "foldable-traversable",
         "invariant",
         "prelude"
+      ]
+    },
+    "lint-purs": {
+      "type": "git",
+      "url": "https://github.com/m-bock/purescript-lint.git",
+      "rev": "6e4a35fb056aedbd670c49e46c9a18d98f19040d",
+      "dependencies": [
+        "aff",
+        "arrays",
+        "console",
+        "effect",
+        "either",
+        "encode-decode",
+        "foldable-traversable",
+        "foreign-object",
+        "language-cst-parser",
+        "maybe",
+        "node-buffer",
+        "node-child-process",
+        "node-fs",
+        "node-glob-basic",
+        "node-path",
+        "ordered-collections",
+        "prelude",
+        "strings",
+        "transformers",
+        "tuples"
       ]
     },
     "lists": {
@@ -1227,6 +1326,35 @@
         "unsafe-coerce"
       ]
     },
+    "node-child-process": {
+      "type": "registry",
+      "version": "11.1.0",
+      "integrity": "sha256-Um7g75gXKEX51ZlviJWocTjUENUW1qHgqGqhYKkka74=",
+      "dependencies": [
+        "aff",
+        "datetime",
+        "effect",
+        "either",
+        "exceptions",
+        "foreign",
+        "foreign-object",
+        "functions",
+        "maybe",
+        "node-buffer",
+        "node-event-emitter",
+        "node-fs",
+        "node-os",
+        "node-streams",
+        "nullable",
+        "parallel",
+        "partial",
+        "posix-types",
+        "prelude",
+        "refs",
+        "safe-coerce",
+        "unsafe-coerce"
+      ]
+    },
     "node-event-emitter": {
       "type": "registry",
       "version": "3.0.0",
@@ -1263,6 +1391,52 @@
         "partial",
         "prelude",
         "strings"
+      ]
+    },
+    "node-glob-basic": {
+      "type": "registry",
+      "version": "2.0.0",
+      "integrity": "sha256-bGqHSBqz99RgUAuoFEllfm5dIlNBGV6x1QSXbQhsbLk=",
+      "dependencies": [
+        "aff",
+        "effect",
+        "either",
+        "foldable-traversable",
+        "lists",
+        "maybe",
+        "node-fs",
+        "node-path",
+        "node-process",
+        "ordered-collections",
+        "parallel",
+        "prelude",
+        "refs",
+        "strings",
+        "tuples"
+      ]
+    },
+    "node-os": {
+      "type": "registry",
+      "version": "5.1.0",
+      "integrity": "sha256-UtQiPiZy5ouV832ubww/U8KlpVYny9xsW8WWfYOEgtA=",
+      "dependencies": [
+        "arrays",
+        "bifunctors",
+        "control",
+        "datetime",
+        "effect",
+        "either",
+        "exceptions",
+        "foreign",
+        "foreign-object",
+        "functions",
+        "maybe",
+        "node-buffer",
+        "nullable",
+        "partial",
+        "posix-types",
+        "prelude",
+        "unsafe-coerce"
       ]
     },
     "node-path": {
