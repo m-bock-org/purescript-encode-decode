@@ -49,7 +49,7 @@
           # to do this itself and stopped, and the difference matters:
           # outside it, `purs` is whatever is installed globally.
           shellHook = ''
-            case $- in *i*) export PS1="NIX:$PS1" ;; esac
+            case $- in *i*) export PS1="(encode-decode) $PS1" ;; esac
           '';
 
           packages = [
