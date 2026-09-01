@@ -6,7 +6,6 @@ module Data.Json.Encode.Record
   , gEncodeRecord
   ) where
 
-
 import Data.Argonaut.Core (fromObject)
 import Data.Json.Encode (EncodeJson, Json, fromFn, runEncode)
 import Data.Symbol (class IsSymbol, reflectSymbol)
