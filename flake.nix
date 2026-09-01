@@ -24,7 +24,6 @@
         workspace = lib.mkWorkspace {
           src = ./.;
           name = "encode-decode";
-          gitHashes.lint-purs = "sha256-CcbMkCKsPZwoGJLylQOspF+oOWgylkhcM7W5/7VGQcg=";
         };
       in
       {
@@ -33,6 +32,11 @@
         # What the editor runs, so it never reaches for a globally
         # installed compiler or the one under node_modules.
         packages.toolchain = toolchain;
+        # The compiled test closure - every dependency plus the local
+        # packages built with their tests. `just output` copies this so a
+        # dev shell never recompiles what al-dente already built once per
+        # machine, which is the whole point of building with al-dente.
+        packages.testOutput = workspace.testOutput;
 
         checks = {
           # The spec suite, run from the store.
