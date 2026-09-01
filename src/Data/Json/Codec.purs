@@ -30,6 +30,7 @@ module Data.Json.Codec
   , decoder
   , codecInvmap
   , codecRefine
+  , codecNamed
   , codecRawJson
   , codecString
   , codecNumber
@@ -102,6 +103,16 @@ codecRefine
   -> JsonCodec b
 codecRefine narrow widen (JsonCodec c) =
   JsonCodec { encode: widen >$< c.encode, decode: Decode.decodeRefine narrow c.decode }
+
+-- | Name a codec, so a decode failure says which thing failed to read.
+-- |
+-- | Only the decode half changes: an encoder cannot fail, so there is
+-- | nothing for a name to qualify. That asymmetry is why this is a
+-- | combinator rather than a parameter of `codecRecord` - the name
+-- | belongs to one direction, and pretending otherwise would put it in
+-- | the signature of both.
+codecNamed :: forall a. String -> JsonCodec a -> JsonCodec a
+codecNamed name (JsonCodec c) = JsonCodec (c { decode = Decode.decodeNamed name c.decode })
 
 -- | A subtree carried through untouched.
 codecRawJson :: JsonCodec Json

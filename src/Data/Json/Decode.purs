@@ -24,6 +24,7 @@ module Data.Json.Decode
   , decodeRawJson
   , decodeFail
   , decodeRefine
+  , decodeNamed
   , decodeAttempt
   , runDecodeFromString
   , decodeString
@@ -46,6 +47,7 @@ import Data.Argonaut.Core as Argonaut
 import Data.Argonaut.Decode.Decoders as Decoders
 import Data.Argonaut.Decode.Error (JsonDecodeError(..), printJsonDecodeError)
 import Data.Argonaut.Parser (jsonParser) as Parser
+import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Map (Map)
 import Data.Maybe (Maybe(..))
@@ -143,6 +145,15 @@ decodeFail err = DecodeJson \_ -> Left err
 -- | is `Applicative`.
 decodeRefine :: forall a b. (a -> Either JsonDecodeError b) -> DecodeJson a -> DecodeJson b
 decodeRefine f (DecodeJson g) = DecodeJson \json -> f =<< g json
+
+-- | Wrap whatever a decoder reports in a name, so an error says which
+-- | thing failed to read and not only which key.
+-- |
+-- | Cheap and worth it on anything a nested structure reaches for: the
+-- | difference between `at "euro": expected String` and `Euros > at
+-- | "euro": expected String` is knowing where to look.
+decodeNamed :: forall a. String -> DecodeJson a -> DecodeJson a
+decodeNamed name (DecodeJson f) = DecodeJson (lmap (Named name) <<< f)
 
 -- | Run a decoder and hand back its *result*, success or failure, without
 -- | failing. For a field whose own decode failure must not abort the
