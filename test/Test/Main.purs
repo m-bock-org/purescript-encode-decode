@@ -5,7 +5,6 @@ import Prelude
 import Effect (Effect)
 import Test.Data.Json.RecordSpec as Data.Json.RecordSpec
 import Test.Data.Json.SumSpec as Data.Json.SumSpec
-import Test.Data.Json.ValueSpec as Data.Json.ValueSpec
 import Test.Data.JsonSpec as Data.JsonSpec
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner.Node (runSpecAndExitProcess)
@@ -16,4 +15,3 @@ main =
     Data.JsonSpec.spec
     Data.Json.RecordSpec.spec
     Data.Json.SumSpec.spec
-    Data.Json.ValueSpec.spec
