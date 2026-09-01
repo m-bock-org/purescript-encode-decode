@@ -1,0 +1,174 @@
+module Test.Data.Json.CodecSpec (spec) where
+
+import Prelude
+
+import Data.Either (Either(..), isLeft)
+import Data.Json.Codec (JsonCodec, codecArray, codecBoolean, codecInt, codecMaybe, codecRefine, codecString, decoder, encoder)
+import Data.Json.Codec.Record (codecRecord)
+import Data.Json.Codec.Sum (codecEnum, codecSum, codecSumWith)
+import Data.Json.Codec.Tuple (codecTuple)
+import Data.Json.Sum.Encoding (Encoding(..), defaultEncoding)
+import Data.Generic.Rep (class Generic)
+import Data.Show.Generic (genericShow)
+import Data.Tuple.Nested ((/\))
+import Data.Json.Decode (JsonDecodeError(..), decodeArray, decodeInt, decodeMaybe, decodeString, runDecode, runDecodeFromString)
+import Data.Json.Decode.Record (decodeRecord)
+import Data.Json.Encode (encodeArray, encodeInt, encodeMaybe, encodeString, runEncode, runEncodeToString)
+import Data.Json.Encode.Record (encodeRecord)
+import Data.Maybe (Maybe(..))
+import Data.Newtype (class Newtype, unwrap, wrap)
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual, shouldSatisfy)
+
+type User =
+  { name :: String
+  , age :: Int
+  , tags :: Array String
+  , nickname :: Maybe String
+  }
+
+-- | Written once. Both directions come out of it, and the compiler
+-- | holds them to the same record type.
+codecUser :: JsonCodec User
+codecUser = codecRecord
+  { name: codecString
+  , age: codecInt
+  , tags: codecArray codecString
+  , nickname: codecMaybe codecString
+  }
+
+newtype Slug = Slug String
+
+derive instance Newtype Slug _
+derive newtype instance Eq Slug
+derive newtype instance Show Slug
+
+-- | A refinement that can reject in one direction only, which is every
+-- | refinement.
+codecSlug :: JsonCodec Slug
+codecSlug = codecRefine narrow unwrap codecString
+  where
+  narrow s
+    | s == "" = Left (TypeMismatch "a non-empty slug")
+    | otherwise = Right (wrap s)
+
+-- | Private. Round trip through both halves of one codec.
+roundTrip :: forall a. JsonCodec a -> a -> Either JsonDecodeError a
+roundTrip c value = runDecode (decoder c) (runEncode (encoder c) value)
+
+data Shape
+  = Circle Int
+  | Rect Int String
+  | Blob
+
+derive instance Generic Shape _
+derive instance Eq Shape
+instance Show Shape where
+  show = genericShow
+
+-- | Nullary, one argument and two, in one description.
+codecShape :: JsonCodec Shape
+codecShape = codecSum
+  { "Circle": codecInt
+  , "Rect": codecInt /\ codecString
+  , "Blob": unit
+  }
+
+data Mode = Simulation | Realisation
+
+derive instance Generic Mode _
+derive instance Eq Mode
+instance Show Mode where
+  show = genericShow
+
+codecMode :: JsonCodec Mode
+codecMode = codecEnum
+
+spec :: Spec Unit
+spec = do
+  describe "Data.Json.Codec" do
+    it "round-trips a record described once" do
+      let user = { name: "ada", age: 36, tags: [ "fp", "ml" ], nickname: Just "the countess" }
+      roundTrip codecUser user `shouldEqual` Right user
+
+    it "round-trips the absent case of a Maybe field" do
+      let user = { name: "ada", age: 36, tags: [], nickname: Nothing }
+      roundTrip codecUser user `shouldEqual` Right user
+
+    -- A round trip cannot catch a codec that agrees with itself on the
+    -- wrong names, because both halves are wrong together. Only a
+    -- document written by hand pins them.
+    it "reads the field names a hand-written document uses" do
+      runDecodeFromString (decoder codecUser)
+        """{"name":"ada","age":36,"tags":["fp"],"nickname":null}"""
+        `shouldEqual` Right { name: "ada", age: 36, tags: [ "fp" ], nickname: Nothing }
+
+    -- The codec layer is meant to be exactly the two directions,
+    -- assembled - not a third implementation that resembles them. This
+    -- is what says so, and what would break first if the split ever
+    -- started doing work of its own.
+    it "agrees, byte for byte, with the two directions written apart" do
+      let user = { name: "ada", age: 36, tags: [ "fp" ], nickname: Just "the countess" }
+      let
+        apart = encodeRecord
+          { name: encodeString
+          , age: encodeInt
+          , tags: encodeArray encodeString
+          , nickname: encodeMaybe encodeString
+          }
+      runEncodeToString (encoder codecUser) user
+        `shouldEqual` runEncodeToString apart user
+
+      let
+        apartBack = decodeRecord
+          { name: decodeString
+          , age: decodeInt
+          , tags: decodeArray decodeString
+          , nickname: decodeMaybe decodeString
+          }
+      runDecode (decoder codecUser) (runEncode apart user)
+        `shouldEqual` runDecode apartBack (runEncode apart user)
+
+    it "round-trips a refinement" do
+      roundTrip codecSlug (Slug "gig-pilot") `shouldEqual` Right (Slug "gig-pilot")
+
+    it "rejects what the refinement rejects, on the decode side only" do
+      runDecode (decoder codecSlug) (runEncode (encoder codecSlug) (Slug ""))
+        `shouldSatisfy` isLeft
+
+  describe "Data.Json.Codec.Sum" do
+    it "round-trips every constructor arity from one description" do
+      roundTrip codecShape (Circle 1) `shouldEqual` Right (Circle 1)
+      roundTrip codecShape (Rect 2 "wide") `shouldEqual` Right (Rect 2 "wide")
+      roundTrip codecShape Blob `shouldEqual` Right Blob
+
+    it "agrees with itself about the wire format" do
+      runDecodeFromString (decoder codecShape)
+        """{"tag":"Rect","values":[2,"wide"]}"""
+        `shouldEqual` Right (Rect 2 "wide")
+
+    -- The `Encoding` is the argument two hand-written directions are
+    -- most likely to disagree about, so it is the one worth changing in
+    -- a test: one argument moves both halves.
+    it "moves both halves when the format changes" do
+      let c = codecSumWith (encodingWith "kind") { "Circle": codecInt, "Rect": codecInt /\ codecString, "Blob": unit }
+      runDecodeFromString (decoder (c :: JsonCodec Shape))
+        """{"kind":"Circle","values":[1]}"""
+        `shouldEqual` Right (Circle 1)
+      roundTrip c (Circle 1) `shouldEqual` Right (Circle 1)
+
+    it "round-trips a tuple as a flat array" do
+      let c = codecTuple (codecString /\ codecInt /\ codecBoolean)
+      roundTrip c ("a" /\ 1 /\ true) `shouldEqual` Right ("a" /\ 1 /\ true)
+      runDecodeFromString (decoder c) """["a",1,true]"""
+        `shouldEqual` Right ("a" /\ 1 /\ true)
+
+    it "round-trips an all-nullary type as a plain string" do
+      roundTrip codecMode Simulation `shouldEqual` Right Simulation
+      runDecodeFromString (decoder codecMode) "\"Realisation\"" `shouldEqual` Right Realisation
+
+-- | Private. `defaultEncoding` with a different tag key.
+encodingWith :: String -> Encoding
+encodingWith tagKey = case defaultEncoding of
+  EncodeTagged r -> EncodeTagged (r { tagKey = tagKey })
+  other -> other

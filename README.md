@@ -52,6 +52,51 @@ matching the point of the library: you usually only need one.
   by constructor name instead, and `tagKey` / `valuesKey` / `mapTag` /
   `unwrapSingleArguments` / `omitEmptyArguments` cover the usual variations.
 
+## Both directions at once
+
+Everything above splits encode from decode, and that stays the default.
+`Data.Json.Codec` is the opt-in layer above it - one description that
+yields both, so the two cannot drift apart:
+
+```purescript
+codecUser :: JsonCodec { name :: String, age :: Int, tags :: Array String }
+codecUser = codecRecord
+  { name: codecString
+  , age: codecInt
+  , tags: codecArray codecString
+  }
+```
+
+`encoder` and `decoder` take a half back out, so nothing is trapped.
+`codecRecord`, `codecSum`/`codecEnum` and `codecTuple` mirror the
+modules of the same name, and `codecInvmap`/`codecRefine` move a codec
+to another type - a codec is invariant, so neither `map` nor `>$<` can
+be written for it, and two functions is what honesty costs.
+
+**When to reach for it.** A format with no history - something this
+program writes and this program reads, where "correct" means a round
+trip returns what went in. Writing the two halves apart is then
+duplication a compiler cannot check: nothing stops an encoder writing
+`dayRate` and a decoder reading `day_rate`, and no test catches it when
+both tests are written from the same wrong idea. Sums make the point
+sharpest, since `Encoding` has to be passed to both directions and
+passed the *same* - here it is one argument.
+
+**When not to.** Anything with readers or writers you do not deploy at
+the same moment: a persisted file, a public API, a queue. There the
+decoder must be more tolerant than the encoder is generous - it reads
+what last year's version wrote, while the encoder only writes today's
+shape. A codec forces the two to be mirror images, which is why
+`decodeRecordWithDefaults` has no codec counterpart. That is not a gap
+to be filled later.
+
+The layer is thin on purpose: each module splits the description in two
+and hands each half to the module that already knows that direction, so
+the logic worth getting right - a record's field walk, a sum's fall
+through from one constructor to the next - lives in one place and is
+reused rather than copied. `Data.Json.Codec.Internal` is that split, and
+it is all of the new machinery there is.
+
 ## Usage
 
 ```yaml

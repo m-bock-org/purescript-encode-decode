@@ -31,6 +31,7 @@ module Data.Json.Decode
   , decodeInt
   , decodeBoolean
   , decodeArray
+  , decodeMaybe
   , decodeObject
   , decodeObjectWithKey
   , decodeMapFromObject
@@ -47,6 +48,7 @@ import Data.Argonaut.Decode.Error (JsonDecodeError(..), printJsonDecodeError)
 import Data.Argonaut.Parser (jsonParser) as Parser
 import Data.Either (Either(..))
 import Data.Map (Map)
+import Data.Maybe (Maybe(..))
 import Data.Map as Map
 import Data.Traversable (for)
 import Data.Tuple (Tuple(..))
@@ -183,6 +185,22 @@ decodeInt = DecodeJson Decoders.decodeInt
 -- | Decode a JSON boolean.
 decodeBoolean :: DecodeJson Boolean
 decodeBoolean = DecodeJson Decoders.decodeBoolean
+
+----------------------------------------------------------------------------------------------------
+-- Maybe
+----------------------------------------------------------------------------------------------------
+
+-- | `null` becomes `Nothing`, anything else goes through the decoder.
+-- | The mirror of `encodeMaybe`, and absent for a while only because
+-- | every consumer wrote it again locally.
+-- |
+-- | A *missing key* is the other convention and is not this: it is a
+-- | property of the record the field sits in, so it lives in
+-- | `Data.Json.Decode.Record` as `decodeRecordWithDefaults`.
+decodeMaybe :: forall a. DecodeJson a -> DecodeJson (Maybe a)
+decodeMaybe (DecodeJson f) = DecodeJson \json ->
+  if Argonaut.isNull json then Right Nothing
+  else map Just (f json)
 
 ----------------------------------------------------------------------------------------------------
 -- Array
