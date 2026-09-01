@@ -31,7 +31,10 @@ spec = describe "Data.Json.Value" do
                 ]
             )
 
-  it "round-trips" do
+  it "writes an asserted Int as a plain number" do
+    Argonaut.stringify (toJson (JsonInt 42)) `shouldEqual` "42"
+
+  it "round-trips the grammar subset - all fromJson can produce" do
     case jsonParser """{"a":[1,"b"],"c":{"d":null},"e":true}""" of
       Left err -> shouldEqual err ""
       -- Json has no Show, so compare the rendered form: it is also
