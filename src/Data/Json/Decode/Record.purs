@@ -7,6 +7,7 @@ module Data.Json.Decode.Record
   , gDecodeRecord
   , DecodeWithDefault
   , decodeWithDefault
+  , decodeOptional
   , decodeRecordWithDefaults
   , DecodeDefaults
   ) where
@@ -16,8 +17,9 @@ import Prelude
 import Data.Argonaut.Core (toObject)
 import Data.Argonaut.Decode (getField)
 import Data.Argonaut.Decode.Error (JsonDecodeError(..))
-import Data.Json.Decode (DecodeJson, Json, fromFn, runDecode)
+import Data.Json.Decode (DecodeJson, Json, decodeMaybe, fromFn, runDecode)
 import Data.Either (Either(..))
+import Data.Maybe (Maybe(..))
 import Data.Either as Either
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Foreign.Object (Object)
@@ -135,6 +137,22 @@ data DecodeWithDefault a = DecodeWithDefault
 -- | Build a `DecodeWithDefault` from a default value and a decoder.
 decodeWithDefault :: forall a. a -> DecodeJson a -> DecodeWithDefault a
 decodeWithDefault def dec = DecodeWithDefault { default: def, decode: dec }
+
+-- | A field whose absence means `Nothing` - the other half of
+-- | `encodeOptional`.
+-- |
+-- | Written in terms of `decodeWithDefault` because that is all it is,
+-- | but it is worth its own name: every *other* default is one-way
+-- | tolerance, a decision about what to believe when a writer said
+-- | nothing. This one is invertible, and so is the only default a codec
+-- | can be built from.
+-- |
+-- | An explicit `null` also reads as `Nothing`, which is a shade more
+-- | tolerant than `encodeOptional` is generous. That costs nothing that
+-- | matters: it is the *value* a round trip has to preserve, and both
+-- | spellings of absence decode to the same one.
+decodeOptional :: forall a. DecodeJson a -> DecodeWithDefault (Maybe a)
+decodeOptional dec = decodeWithDefault Nothing (decodeMaybe dec)
 
 -- | The `hmapWithIndex` "props" that pairs each field's plain decoder
 -- | (from `decs` in `decodeRecordWithDefaults`) with that same field's

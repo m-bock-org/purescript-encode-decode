@@ -30,6 +30,7 @@ module Data.Json.Encode.Sum
   , gEncodeCases
   , class EncodeFields
   , gEncodeFields
+  , encodeSumCase
   , class EncodeEnum
   , gEncodeEnum
   ) where

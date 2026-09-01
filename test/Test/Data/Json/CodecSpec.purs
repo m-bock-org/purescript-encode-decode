@@ -4,8 +4,12 @@ import Prelude
 
 import Data.Either (Either(..), isLeft)
 import Data.Json.Codec (JsonCodec, codecArray, codecBoolean, codecInt, codecMaybe, codecRefine, codecString, decoder, encoder)
-import Data.Json.Codec.Record (codecRecord)
+import Data.Json.Codec.Record (codecOptional, codecRecord)
 import Data.Json.Codec.Sum (codecEnum, codecSum, codecSumWith)
+import Data.Json.Codec.Variant (codecVariant)
+import Data.Variant (Variant)
+import Data.Variant as V
+import Type.Proxy (Proxy(..))
 import Data.Json.Codec.Tuple (codecTuple)
 import Data.Json.Sum.Encoding (Encoding(..), defaultEncoding)
 import Data.Generic.Rep (class Generic)
@@ -84,6 +88,24 @@ instance Show Mode where
 codecMode :: JsonCodec Mode
 codecMode = codecEnum
 
+-- | `Maybe` as key-presence rather than as `null` - the one default
+-- | that is a bijection, so the one a codec can carry.
+codecMaybeNick :: JsonCodec { name :: String, nickname :: Maybe String }
+codecMaybeNick = codecRecord
+  { name: codecString
+  , nickname: codecOptional codecString
+  }
+
+type Msg = Variant (newState :: Int, note :: String)
+
+-- | The shape the dashboard actually uses: a tagged case carrying one
+-- | value.
+codecMsg :: JsonCodec Msg
+codecMsg = codecVariant
+  { newState: codecInt
+  , note: codecString
+  }
+
 spec :: Spec Unit
 spec = do
   describe "Data.Json.Codec" do
@@ -129,6 +151,16 @@ spec = do
       runDecode (decoder codecUser) (runEncode apart user)
         `shouldEqual` runDecode apartBack (runEncode apart user)
 
+    it "round-trips an optional field through absence" do
+      roundTrip codecMaybeNick { name: "ada", nickname: Nothing }
+        `shouldEqual` Right { name: "ada", nickname: Nothing }
+      roundTrip codecMaybeNick { name: "ada", nickname: Just "the countess" }
+        `shouldEqual` Right { name: "ada", nickname: Just "the countess" }
+
+    it "writes no key at all for an absent optional field" do
+      runEncodeToString (encoder codecMaybeNick) { name: "ada", nickname: Nothing }
+        `shouldEqual` """{"name":"ada"}"""
+
     it "round-trips a refinement" do
       roundTrip codecSlug (Slug "gig-pilot") `shouldEqual` Right (Slug "gig-pilot")
 
@@ -162,6 +194,20 @@ spec = do
       roundTrip c ("a" /\ 1 /\ true) `shouldEqual` Right ("a" /\ 1 /\ true)
       runDecodeFromString (decoder c) """["a",1,true]"""
         `shouldEqual` Right ("a" /\ 1 /\ true)
+
+    it "round-trips every case of a variant" do
+      roundTrip codecMsg (V.inj (Proxy @"newState") 7)
+        `shouldEqual` Right (V.inj (Proxy @"newState") 7)
+      roundTrip codecMsg (V.inj (Proxy @"note") "hi")
+        `shouldEqual` Right (V.inj (Proxy @"note") "hi")
+
+    it "writes a variant as tag and value, unwrapped" do
+      runEncodeToString (encoder codecMsg) (V.inj (Proxy @"newState") 7)
+        `shouldEqual` """{"tag":"newState","value":7}"""
+
+    it "reports a broken payload rather than falling through to the next case" do
+      runDecodeFromString (decoder codecMsg) """{"tag":"newState","value":"seven"}"""
+        `shouldSatisfy` isLeft
 
     it "round-trips an all-nullary type as a plain string" do
       roundTrip codecMode Simulation `shouldEqual` Right Simulation

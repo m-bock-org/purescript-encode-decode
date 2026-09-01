@@ -5,12 +5,15 @@ module Data.Json.Codec.Record
   ( codecRecord
   , class CodecRecord
   , codecRecordHalves
+  , CodecOptional
+  , codecOptional
   ) where
 
-import Data.Json.Codec (JsonCodec, codec)
-import Data.Json.Codec.Internal (class SplitCodecs, splitDecoders, splitEncoders)
-import Data.Json.Decode.Record (class DecodeRecord, decodeRecord)
-import Data.Json.Encode.Record (class EncodeRecord, encodeRecord)
+import Data.Json.Codec (JsonCodec, decoder, encoder, codec)
+import Data.Json.Codec.Internal (class SplitCodec, class SplitCodecs, splitDecoders, splitEncoders)
+import Data.Json.Decode.Record (DecodeWithDefault, class DecodeRecord, decodeOptional, decodeRecord)
+import Data.Json.Encode.Record (EncodeOptional, class EncodeRecord, encodeOptional, encodeRecord)
+import Data.Maybe (Maybe)
 import Prim.RowList (class RowToList)
 
 -- | `codecRecord { name: codecString, age: codecInt }` - one record of
@@ -46,3 +49,24 @@ instance
   codecRecordHalves rcs = codec
     (encodeRecord (splitEncoders @rl rcs))
     (decodeRecord (splitDecoders @rl rcs))
+
+-- | A field that is absent from the document when it is `Nothing`.
+newtype CodecOptional a = CodecOptional (JsonCodec a)
+
+-- | `codecRecord { nickname: codecOptional codecString }` - the field's
+-- | type is `Maybe String`, and `Nothing` means the key is not written
+-- | rather than written as `null`.
+-- |
+-- | The one default a codec can carry, and worth saying why. Every other
+-- | default is a decision about what to believe when a writer said
+-- | nothing, which only the decode side can make. Absence-means-`Nothing`
+-- | is not a belief: absent and present are two states, `Nothing` and
+-- | `Just` are two states, and the mapping between them is a bijection.
+-- | So it round-trips, and so it belongs here - while
+-- | `decodeRecordWithDefaults` still does not.
+codecOptional :: forall a. JsonCodec a -> CodecOptional a
+codecOptional = CodecOptional
+
+instance SplitCodec (CodecOptional a) (EncodeOptional a) (DecodeWithDefault (Maybe a)) where
+  splitEncoder (CodecOptional c) = encodeOptional (encoder c)
+  splitDecoder (CodecOptional c) = decodeOptional (decoder c)

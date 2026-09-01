@@ -17,6 +17,10 @@ module Data.Json.Decode.Sum
   , decodeEnum
   , decodeEnumWith
   , Err(..)
+  , jErr
+  , finalizeErr
+  , lookupCase
+  , singleValue
   , class DecodeCases
   , gDecodeCases
   , class DecodeFields

@@ -18,7 +18,8 @@
             "prelude",
             "record",
             "strings",
-            "tuples"
+            "tuples",
+            "variant"
           ]
         },
         "test": {

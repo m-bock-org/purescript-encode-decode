@@ -5,6 +5,7 @@
 module Data.Json.Sum.Encoding
   ( Encoding(..)
   , defaultEncoding
+  , variantEncoding
   , lowerFirst
   ) where
 
@@ -49,6 +50,23 @@ defaultEncoding = EncodeTagged
   { tagKey: "tag"
   , valuesKey: "values"
   , unwrapSingleArguments: false
+  , omitEmptyArguments: false
+  , mapTag: identity
+  }
+
+-- | What a `Variant` gets by default: `{ "tag": "newState", "value":
+-- | ... }`.
+-- |
+-- | Different from `defaultEncoding` in two ways, both because a
+-- | `Variant` case carries exactly one value where a constructor
+-- | carries any number - so the key is `value` rather than `values`,
+-- | and it is not wrapped in an array it could never have more than one
+-- | element in.
+variantEncoding :: Encoding
+variantEncoding = EncodeTagged
+  { tagKey: "tag"
+  , valuesKey: "value"
+  , unwrapSingleArguments: true
   , omitEmptyArguments: false
   , mapTag: identity
   }

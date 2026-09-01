@@ -68,8 +68,8 @@ codecUser = codecRecord
 ```
 
 `encoder` and `decoder` take a half back out, so nothing is trapped.
-`codecRecord`, `codecSum`/`codecEnum` and `codecTuple` mirror the
-modules of the same name, and `codecInvmap`/`codecRefine` move a codec
+`codecRecord`, `codecSum`/`codecEnum`, `codecVariant` and `codecTuple`
+mirror the modules of the same name, and `codecInvmap`/`codecRefine` move a codec
 to another type - a codec is invariant, so neither `map` nor `>$<` can
 be written for it, and two functions is what honesty costs.
 
@@ -81,6 +81,13 @@ duplication a compiler cannot check: nothing stops an encoder writing
 both tests are written from the same wrong idea. Sums make the point
 sharpest, since `Encoding` has to be passed to both directions and
 passed the *same* - here it is one argument.
+
+One default *is* bidirectional and is here: `codecOptional` makes a
+field's absence mean `Nothing` and `Nothing` mean the key is not
+written. That is a bijection rather than a belief about what a silent
+writer meant, which is what separates it from every other default -
+`decodeRecordWithDefaults` decides what to believe, and only a decoder
+can do that.
 
 **When not to.** Anything with readers or writers you do not deploy at
 the same moment: a persisted file, a public API, a queue. There the
@@ -108,17 +115,26 @@ extraPackages:
 
 Then add `encode-decode` to your package's `dependencies`.
 
+- **`Data.Json.Decode.Variant`** / **`Data.Json.Encode.Variant`** - the
+  same idea again for a `Variant`, and an easier one: the row is in the
+  type, so nothing has to be derived from a `Generic` representation.
+  The default wire format is `{"tag": ..., "value": ...}` with the value
+  unwrapped, since a `Variant` case carries exactly one thing where a
+  constructor carries any number.
+
+  ```purescript
+  type Msg = Variant (newState :: State)
+
+  codecMsg :: JsonCodec Msg
+  codecMsg = codecVariant { newState: codecState }
+  ```
+
 ## Roadmap
 
-- **`Variant` support.** A `Variant` is structurally a sum, so the two sum
-  modules have an obvious counterpart - and an easier one, since a
-  `Variant` carries its row type directly and needs no `Generic`
-  derivation to inspect. Deliberately not built yet: the only place a
-  `Variant` currently meets JSON in the consuming codebase (tick-duck's
-  dashboard `Message.purs`) is on `codec-argonaut` and would need a
-  broader migration to move, so there'd be no adopter. The plan is to
-  live with the `data`-sum support above first and add this if it earns
-  its place.
+Nothing outstanding. `Variant` support was the last item, and was built
+when tick-duck's dashboard gave it an adopter - which was the condition
+it was waiting on, rather than a guess about whether it would be
+wanted.
 
 ## Prior art
 
