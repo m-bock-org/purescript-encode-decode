@@ -2,7 +2,9 @@ module Test.Data.Json.CodecSpec (spec) where
 
 import Prelude
 
-import Data.Either (Either(..), isLeft)
+import Data.Either (Either(..))
+
+import Data.Either (isLeft) as Either
 import Data.Json.Codec (JsonCodec, codecArray, codecBoolean, codecInt, codecMaybe, codecRefine, codecString, decoder, encoder)
 import Data.Json.Codec.Record (codecOptional, codecRecord)
 import Data.Json.Codec.Sum (codecEnum, codecSum, codecSumWith)
@@ -33,6 +35,7 @@ type User =
 
 -- | Written once. Both directions come out of it, and the compiler
 -- | holds them to the same record type.
+-- | Private.
 codecUser :: JsonCodec User
 codecUser = codecRecord
   { name: codecString
@@ -49,6 +52,7 @@ derive newtype instance Show Slug
 
 -- | A refinement that can reject in one direction only, which is every
 -- | refinement.
+-- | Private.
 codecSlug :: JsonCodec Slug
 codecSlug = codecRefine narrow unwrap codecString
   where
@@ -56,8 +60,8 @@ codecSlug = codecRefine narrow unwrap codecString
     | s == "" = Left (TypeMismatch "a non-empty slug")
     | otherwise = Right (wrap s)
 
--- | Private. Round trip through both halves of one codec.
-roundTrip :: forall a. JsonCodec a -> a -> Either JsonDecodeError a
+-- | Private. Used only by `spec`.
+roundTrip :: ∀ a. JsonCodec a -> a -> Either JsonDecodeError a
 roundTrip c value = runDecode (decoder c) (runEncode (encoder c) value)
 
 data Shape
@@ -71,6 +75,7 @@ instance Show Shape where
   show = genericShow
 
 -- | Nullary, one argument and two, in one description.
+-- | Private.
 codecShape :: JsonCodec Shape
 codecShape = codecSum
   { "Circle": codecInt
@@ -85,11 +90,12 @@ derive instance Eq Mode
 instance Show Mode where
   show = genericShow
 
+-- | Private.
 codecMode :: JsonCodec Mode
 codecMode = codecEnum
 
--- | `Maybe` as key-presence rather than as `null` - the one default
 -- | that is a bijection, so the one a codec can carry.
+-- | Private.
 codecMaybeNick :: JsonCodec { name :: String, nickname :: Maybe String }
 codecMaybeNick = codecRecord
   { name: codecString
@@ -100,12 +106,14 @@ type Msg = Variant (newState :: Int, note :: String)
 
 -- | The shape the dashboard actually uses: a tagged case carrying one
 -- | value.
+-- | Private.
 codecMsg :: JsonCodec Msg
 codecMsg = codecVariant
   { newState: codecInt
   , note: codecString
   }
 
+-- | Uses `roundTrip`, `encodingWith`.
 spec :: Spec Unit
 spec = do
   describe "Data.Json.Codec" do
@@ -166,7 +174,7 @@ spec = do
 
     it "rejects what the refinement rejects, on the decode side only" do
       runDecode (decoder codecSlug) (runEncode (encoder codecSlug) (Slug ""))
-        `shouldSatisfy` isLeft
+        `shouldSatisfy` Either.isLeft
 
   describe "Data.Json.Codec.Sum" do
     it "round-trips every constructor arity from one description" do
@@ -207,13 +215,13 @@ spec = do
 
     it "reports a broken payload rather than falling through to the next case" do
       runDecodeFromString (decoder codecMsg) """{"tag":"newState","value":"seven"}"""
-        `shouldSatisfy` isLeft
+        `shouldSatisfy` Either.isLeft
 
     it "round-trips an all-nullary type as a plain string" do
       roundTrip codecMode Simulation `shouldEqual` Right Simulation
       runDecodeFromString (decoder codecMode) "\"Realisation\"" `shouldEqual` Right Realisation
 
--- | Private. `defaultEncoding` with a different tag key.
+-- | Private. Used only by `spec`.
 encodingWith :: String -> Encoding
 encodingWith tagKey = case defaultEncoding of
   EncodeTagged r -> EncodeTagged (r { tagKey = tagKey })
