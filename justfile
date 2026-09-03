@@ -18,8 +18,18 @@ build:
 test:
     spago test
 
-lint:
-    spago test -m Test.Lint
+# The public style, run as a binary rather than as a dependency.
+#
+# It cannot be a dependency: the regulator depends on this package, so
+# the arrow only goes one way. The binary has no such problem - it
+# reads the workspace it is run in, and `lint-exemptions.json` beside
+# this file is where any departure from the style goes.
+#
+# `--fix <command>` names a program that proposes fixes for findings the
+# style has guidance for. What that program talks to is its own
+# business; the linter judges what comes back.
+lint *ARGS:
+    nix run git+ssh://git@github.com/m-bock-org/purescript-lint-regulator#lint-public -- {{ARGS}}
 
 # The gate's build: warnings are errors. purs does not re-report a
 # warning for a module it did not recompile, so an incremental strict
