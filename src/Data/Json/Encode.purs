@@ -76,25 +76,21 @@ instance Contravariant EncodeJson where
 -- | Wrap a raw encoding function. The escape hatch out of composition -
 -- | needed at the boundary where a `newtype` is unwrapped, or for a
 -- | shape no combinator covers yet.
-fromFn :: forall a. (a -> Json) -> EncodeJson a
+fromFn :: ∀ a. (a -> Json) -> EncodeJson a
 fromFn = EncodeJson
 
 -- | Run an encoder, down to a `Json`. The counterpart of
--- | `Data.Json.Decode.runDecode`, and the runner to reach for when a
--- | `Json` - not a document - is what the caller wants: a value to nest
 -- | inside a larger structure, or to hand to a library that speaks
--- | `Json` already.
 -- |
 -- | Unlike `fromFn` this is not an escape hatch. It consumes an encoder
 -- | rather than manufacturing one, so it cannot be used to smuggle a
 -- | hand-written `a -> Json` back into the vocabulary.
-runEncode :: forall a. EncodeJson a -> a -> Json
+runEncode :: ∀ a. EncodeJson a -> a -> Json
 runEncode (EncodeJson f) = f
 
 -- | The encoder that does nothing: puts an already-built `Json` in
 -- | place. Use it to hand a container combinator contents that are
 -- | already encoded, e.g. `encodeArray encodeRawJson` for an
--- | `Array Json`. Mirror of `Data.Json.Decode.decodeRawJson`.
 encodeRawJson :: EncodeJson Json
 encodeRawJson = EncodeJson identity
 
@@ -106,7 +102,7 @@ newtype Encoded = Encoded Json
 -- | Pair a value with the encoder for it. Nothing can be read back out;
 -- | the point is to make "this branch encodes itself this way" a value,
 -- | so a sum's branches can each choose their own shape.
-encoded :: forall a. EncodeJson a -> a -> Encoded
+encoded :: ∀ a. EncodeJson a -> a -> Encoded
 encoded (EncodeJson f) a = Encoded (f a)
 
 -- | Build an encoder for a sum by choosing, per case, how that case
@@ -127,7 +123,7 @@ encoded (EncodeJson f) a = Encoded (f a)
 -- | For a `Generic` sum with a uniform wire shape, `Data.Json.Encode.Sum`
 -- | derives all of this instead; reach for `encodeDispatch` when the
 -- | format is per-case rather than mechanical.
-encodeDispatch :: forall a. (a -> Encoded) -> EncodeJson a
+encodeDispatch :: ∀ a. (a -> Encoded) -> EncodeJson a
 encodeDispatch f = EncodeJson \a -> case f a of Encoded json -> json
 
 -- | Run an encoder, all the way to a JSON document.
@@ -138,29 +134,27 @@ encodeDispatch f = EncodeJson \a -> case f a of Encoded json -> json
 -- | prefix made two different kinds of thing look alike.
 -- |
 -- | The boundary combinator, and the mirror of
--- | `Data.Json.Decode.runDecodeFromString`: where a `String` is what is wanted - a
 -- | file to write, a request body - this is the whole journey, with no
 -- | intermediate `Json` for a caller to hold.
-runEncodeToString :: forall a. EncodeJson a -> a -> String
+-- | Uses `stringify`.
+runEncodeToString :: ∀ a. EncodeJson a -> a -> String
 runEncodeToString (EncodeJson f) = stringify <<< f
 
--- | Private. The encoder that ignores its input and writes `null` - the
 -- | counterpart of `pure` on the decode side, a constant rather than a
 -- | reading of anything. Not exported: `encodeMaybe` is the shape callers
 -- | actually want, and a bare null-writer invites using it where an
 -- | absent key would be the better wire format.
-encodeNull :: forall a. EncodeJson a
+-- | Private.
+encodeNull :: ∀ a. EncodeJson a
 encodeNull = EncodeJson (const jsonNull)
 
--- | `Nothing` becomes `null`, `Just` becomes the value. The other
 -- | convention - omitting the key entirely - is a property of the record
 -- | the field sits in, not of the value, so it lives in
--- | `Data.Json.Encode.Record` instead.
-encodeMaybe :: forall a. EncodeJson a -> EncodeJson (Maybe a)
+-- | Uses `encodeDispatch`, `encoded`.
+encodeMaybe :: ∀ a. EncodeJson a -> EncodeJson (Maybe a)
 encodeMaybe e = encodeDispatch (maybe (encoded encodeNull unit) (encoded e))
 
--- | `runEncodeToString`, indented for a human to read.
-runEncodeToStringIndented :: forall a. Int -> EncodeJson a -> a -> String
+runEncodeToStringIndented :: ∀ a. Int -> EncodeJson a -> a -> String
 runEncodeToStringIndented n (EncodeJson f) = Argonaut.stringifyWithIndent n <<< f
 
 ----------------------------------------------------------------------------------------------------
@@ -188,7 +182,7 @@ encodeBoolean = EncodeJson Encoders.encodeBoolean
 ----------------------------------------------------------------------------------------------------
 
 -- | Encode an `Array a` as a JSON array, applying one encoder to every element.
-encodeArray :: forall a. EncodeJson a -> EncodeJson (Array a)
+encodeArray :: ∀ a. EncodeJson a -> EncodeJson (Array a)
 encodeArray (EncodeJson f) = EncodeJson (Encoders.encodeArray f)
 
 ----------------------------------------------------------------------------------------------------
@@ -197,19 +191,12 @@ encodeArray (EncodeJson f) = EncodeJson (Encoders.encodeArray f)
 
 -- | Encode an `Object a` as a JSON object, applying one encoder to every
 -- | value (keys stay as-is).
-encodeObject :: forall a. EncodeJson a -> EncodeJson (Object a)
+encodeObject :: ∀ a. EncodeJson a -> EncodeJson (Object a)
 encodeObject (EncodeJson f) = EncodeJson (Encoders.encodeForeignObject f)
 
-----------------------------------------------------------------------------------------------------
--- Tuple
-----------------------------------------------------------------------------------------------------
-
-----------------------------------------------------------------------------------------------------
--- Map
-----------------------------------------------------------------------------------------------------
-
 -- | Encode a `Map k v` as a JSON object, rendering each key to a string.
-encodeMapToObject :: forall k v. (k -> String) -> EncodeJson v -> EncodeJson (Map k v)
+-- | Uses `runEncode`, `encodeTupleArrayToObject`.
+encodeMapToObject :: ∀ k v. (k -> String) -> EncodeJson v -> EncodeJson (Map k v)
 encodeMapToObject keyEncoder valueEncoder =
   EncodeJson (runEncode (encodeTupleArrayToObject keyEncoder valueEncoder) <<< Map.toUnfoldable)
 
@@ -221,7 +208,7 @@ encodeMapToObject keyEncoder valueEncoder =
 -- | this library exists to avoid. Later entries win on a duplicate key,
 -- | matching `Foreign.Object.fromFoldable`.
 encodeTupleArrayToObject
-  :: forall k v. (k -> String) -> EncodeJson v -> EncodeJson (Array (k /\ v))
+  :: ∀ k v. (k -> String) -> EncodeJson v -> EncodeJson (Array (k /\ v))
 encodeTupleArrayToObject keyEncoder (EncodeJson encodeValue) =
   EncodeJson \entries ->
     Argonaut.fromObject
@@ -240,3 +227,11 @@ jsonNull = Argonaut.jsonNull
 -- | up with the encoders above.
 stringify :: Json -> String
 stringify = Argonaut.stringify
+--
+-- `encodeMapToObject`
+-- --------------------------------------------------------------------------------------------------
+-- Tuple
+-- --------------------------------------------------------------------------------------------------
+-- --------------------------------------------------------------------------------------------------
+-- Map
+-- --------------------------------------------------------------------------------------------------

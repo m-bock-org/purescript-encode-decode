@@ -20,10 +20,9 @@ import Prim.RowList as RL
 import Record as Record
 import Type.Proxy (Proxy(..))
 
--- | `encodeRecord { name: encodeString } { name: "ada" }` - `rs` is a
 -- | record of per-field encoders, `r` the record of values they apply to.
 encodeRecord
-  :: forall rl rs r
+  :: ∀ rl rs r
    . RowToList rs rl
   => EncodeRecord rl rs r
   => Record rs
@@ -68,7 +67,6 @@ instance
 -- | required ones without every field opting into the same behaviour.
 data EncodeOptional a = EncodeOptional (EncodeJson a)
 
--- | `Nothing` omits the key; `Just` writes the value. The other
 -- | convention - `null` for `Nothing` - is `encodeMaybe`, and is a
 -- | property of the value rather than of the record it sits in.
 -- |
@@ -76,7 +74,7 @@ data EncodeOptional a = EncodeOptional (EncodeJson a)
 -- | default: absent and present are two states, `Nothing` and `Just`
 -- | are two states, and the mapping is a bijection. `decodeOptional` is
 -- | the other half, and a codec can be built from the pair.
-encodeOptional :: forall a. EncodeJson a -> EncodeOptional a
+encodeOptional :: ∀ a. EncodeJson a -> EncodeOptional a
 encodeOptional = EncodeOptional
 
 instance

@@ -2,7 +2,9 @@ module Test.Data.Json.SumSpec (spec) where
 
 import Prelude
 
-import Data.Either (Either(..), isLeft)
+import Data.Either (Either(..))
+
+import Data.Either (isLeft) as Either
 import Data.Generic.Rep (class Generic)
 import Data.Json.Decode (Json, JsonDecodeError(..), decodeInt, decodeString, jsonParser)
 import Data.Json.Decode.Sum (decodeEnum, decodeEnumWith, decodeSum, decodeSumWith)
@@ -26,6 +28,7 @@ derive instance Eq Shape
 instance Show Shape where
   show s = genericShow s
 
+-- | Private. Used only by `spec`.
 encodeShape :: Shape -> Json
 encodeShape = Encode.runEncode $ encodeSum
   { "Blob": unit
@@ -33,6 +36,7 @@ encodeShape = Encode.runEncode $ encodeSum
   , "Rect": encodeInt /\ encodeString
   }
 
+-- | Private. Used only by `spec`.
 decodeShape :: Json -> Either JsonDecodeError Shape
 decodeShape = Decode.runDecode $ decodeSum
   { "Blob": unit
@@ -48,7 +52,7 @@ instance Show Mode where
   show m = genericShow m
 
 -- | The wire format tick-duck's journal already uses on disk:
--- | `{"kind": "tradeTick", "entry": {...}}`.
+-- | Private.
 journalEncoding :: Encoding
 journalEncoding = EncodeTagged
   { tagKey: "kind"
@@ -58,6 +62,7 @@ journalEncoding = EncodeTagged
   , mapTag: lowerFirst
   }
 
+-- | Private. Used only by `spec`.
 encodeShapeJournalStyle :: Shape -> Json
 encodeShapeJournalStyle = Encode.runEncode $ encodeSumWith journalEncoding
   { "Blob": unit
@@ -65,6 +70,7 @@ encodeShapeJournalStyle = Encode.runEncode $ encodeSumWith journalEncoding
   , "Rect": encodeInt /\ encodeString
   }
 
+-- | Private. Used only by `spec`.
 decodeShapeJournalStyle :: Json -> Either JsonDecodeError Shape
 decodeShapeJournalStyle = Decode.runDecode $ decodeSumWith journalEncoding
   { "Blob": unit
@@ -74,26 +80,34 @@ decodeShapeJournalStyle = Decode.runDecode $ decodeSumWith journalEncoding
 
 -- | What `decodeSum` reports when every constructor was tried and none
 -- | claimed the tag - see `Data.Json.Decode.Sum.Err`.
+-- | Private.
 noMatch :: JsonDecodeError
 noMatch = TypeMismatch "no matching constructor"
 
+-- | Private. Used only by `spec`.
 encodeMode :: Mode -> Json
 encodeMode = Encode.runEncode encodeEnum
 
+-- | Private. Used only by `spec`.
 decodeMode :: Json -> Either JsonDecodeError Mode
 decodeMode = Decode.runDecode decodeEnum
 
+-- | Private. Used only by `spec`.
 encodeModeLower :: Mode -> Json
 encodeModeLower = Encode.runEncode (encodeEnumWith lowerFirst)
 
+-- | Private. Used only by `spec`.
 decodeModeLower :: Json -> Either JsonDecodeError Mode
 decodeModeLower = Decode.runDecode (decodeEnumWith lowerFirst)
 
+-- | Private. Used only by `spec`.
 unsafeParse :: String -> Json
 unsafeParse s = case jsonParser s of
   Right json -> json
   Left _ -> Encode.runEncode encodeString ("SumSpec fixture: invalid JSON literal " <> s)
 
+-- | Uses `decodeShape`, `encodeShape`, `unsafeParse`, `encodeShapeJournalStyle`,
+-- | `decodeShapeJournalStyle`, `encodeMode`, `decodeMode`, `encodeModeLower`, `decodeModeLower`.
 spec :: Spec Unit
 spec = do
   describe "Data.Json.Sum" do
@@ -115,20 +129,13 @@ spec = do
         stringify (encodeShape Blob) `shouldEqual` """{"tag":"Blob","values":[]}"""
 
     describe "errors" do
-      -- The distinction that makes sum decoding correct: a tag that
-      -- matched but whose payload is broken must report that payload
-      -- error, not fall through and end up as "no constructor
-      -- matched" - which would hide the real cause.
       it "reports the payload error when a matching case has a bad payload" do
         let json = unsafeParse """{"tag":"Circle","values":["not-an-int"]}"""
-        -- Asserted as "not the no-match error" rather than against
-        -- argonaut's exact wording for a bad Int, which this library
-        -- passes through untouched and doesn't control.
-        decodeShape json `shouldSatisfy` isLeft
+        decodeShape json `shouldSatisfy` Either.isLeft
         decodeShape json `shouldSatisfy` (_ /= Left noMatch)
 
       it "fails when no constructor matches the tag" do
-        decodeShape (unsafeParse """{"tag":"Hexagon","values":[]}""") `shouldSatisfy` isLeft
+        decodeShape (unsafeParse """{"tag":"Hexagon","values":[]}""") `shouldSatisfy` Either.isLeft
 
     describe "custom encoding (tick-duck journal format)" do
       it "reproduces the existing on-disk shape exactly" do
@@ -156,4 +163,13 @@ spec = do
 
       it "rejects a string that isn't a constructor" do
         decodeMode (Encode.runEncode encodeString "Nonsense")
-          `shouldSatisfy` isLeft
+          `shouldSatisfy` Either.isLeft
+--
+-- `spec`
+-- The distinction that makes sum decoding correct: a tag that
+-- matched but whose payload is broken must report that payload
+-- error, not fall through and end up as "no constructor
+-- matched" - which would hide the real cause.
+-- Asserted as "not the no-match error" rather than against
+-- argonaut's exact wording for a bad Int, which this library
+-- passes through untouched and doesn't control.

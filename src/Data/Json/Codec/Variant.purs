@@ -16,14 +16,13 @@ import Data.Json.Sum.Encoding (Encoding, variantEncoding)
 import Data.Variant (Variant)
 import Prim.RowList (class RowToList)
 
--- | `codecVariant { newState: codecState }` - one entry per case, and
 -- | both directions come out of it.
-codecVariant :: forall rcs ro. CodecVariant rcs ro => Record rcs -> JsonCodec (Variant ro)
+-- | Uses `codecVariantWith`.
+codecVariant :: ∀ rcs ro. CodecVariant rcs ro => Record rcs -> JsonCodec (Variant ro)
 codecVariant = codecVariantWith variantEncoding
 
--- | `codecVariant` with an explicit wire format - see `Encoding`.
 codecVariantWith
-  :: forall rcs ro
+  :: ∀ rcs ro
    . CodecVariant rcs ro
   => Encoding
   -> Record rcs
