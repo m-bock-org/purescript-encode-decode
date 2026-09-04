@@ -16,9 +16,8 @@ import Data.Json.Encode.Record (EncodeOptional, class EncodeRecord, encodeOption
 import Data.Maybe (Maybe)
 import Prim.RowList (class RowToList)
 
--- | `codecRecord { name: codecString, age: codecInt }` - one record of
 -- | codecs, and both directions come out of it.
-codecRecord :: forall rcs r. CodecRecord rcs r => Record rcs -> JsonCodec (Record r)
+codecRecord :: ∀ rcs r. CodecRecord rcs r => Record rcs -> JsonCodec (Record r)
 codecRecord = codecRecordHalves
 
 -- | What a record of codecs has to satisfy: split into halves, each
@@ -53,7 +52,6 @@ instance
 -- | A field that is absent from the document when it is `Nothing`.
 newtype CodecOptional a = CodecOptional (JsonCodec a)
 
--- | `codecRecord { nickname: codecOptional codecString }` - the field's
 -- | type is `Maybe String`, and `Nothing` means the key is not written
 -- | rather than written as `null`.
 -- |
@@ -61,10 +59,8 @@ newtype CodecOptional a = CodecOptional (JsonCodec a)
 -- | default is a decision about what to believe when a writer said
 -- | nothing, which only the decode side can make. Absence-means-`Nothing`
 -- | is not a belief: absent and present are two states, `Nothing` and
--- | `Just` are two states, and the mapping between them is a bijection.
 -- | So it round-trips, and so it belongs here - while
--- | `decodeRecordWithDefaults` still does not.
-codecOptional :: forall a. JsonCodec a -> CodecOptional a
+codecOptional :: ∀ a. JsonCodec a -> CodecOptional a
 codecOptional = CodecOptional
 
 instance SplitCodec (CodecOptional a) (EncodeOptional a) (DecodeWithDefault (Maybe a)) where

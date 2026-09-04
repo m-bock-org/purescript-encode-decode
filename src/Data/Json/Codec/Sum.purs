@@ -26,19 +26,18 @@ import Data.Json.Encode.Sum (class EncodeCases, class EncodeEnum, encodeEnumWith
 import Data.Json.Sum.Encoding (Encoding, defaultEncoding)
 import Prim.RowList (class RowToList)
 
--- | `codecSum { "Circle": codecInt, "Rect": codecInt /\ codecString,
 -- | "Blob": unit }` - one entry per constructor, checked against the
 -- | type's `Generic` representation.
-codecSum :: forall rcs a. CodecSum rcs a => Record rcs -> JsonCodec a
+-- | Uses `codecSumWith`.
+codecSum :: ∀ rcs a. CodecSum rcs a => Record rcs -> JsonCodec a
 codecSum = codecSumWith defaultEncoding
 
--- | `codecSum` with an explicit wire format - see `Encoding`.
 -- |
 -- | Written as two directions, this argument is the one most likely to
 -- | be changed on one side and forgotten on the other: a `tagKey` tweak
 -- | that stops the decoder reading what the encoder now writes, with
 -- | both sides still compiling and only a round trip to catch it.
-codecSumWith :: forall rcs a. CodecSum rcs a => Encoding -> Record rcs -> JsonCodec a
+codecSumWith :: ∀ rcs a. CodecSum rcs a => Encoding -> Record rcs -> JsonCodec a
 codecSumWith = codecSumHalves
 
 -- | What a record of per-constructor codecs has to satisfy.
@@ -64,10 +63,10 @@ instance
 
 -- | A type whose constructors are all nullary, as a plain JSON string.
 -- | No record: there is nothing per-constructor to describe.
-codecEnum :: forall a. CodecEnum a => JsonCodec a
+-- | Uses `codecEnumWith`.
+codecEnum :: ∀ a. CodecEnum a => JsonCodec a
 codecEnum = codecEnumWith identity
 
--- | `codecEnum`, with the constructor name rewritten before it hits the
 -- | wire - `lowerFirst`, say.
 -- |
 -- | One function, not two, and that is this module's argument in
@@ -75,7 +74,7 @@ codecEnum = codecEnumWith identity
 -- | nothing checks that they are inverses. With one, a rewrite that
 -- | loses information fails to round-trip rather than compiling into a
 -- | pair that disagrees.
-codecEnumWith :: forall a. CodecEnum a => (String -> String) -> JsonCodec a
+codecEnumWith :: ∀ a. CodecEnum a => (String -> String) -> JsonCodec a
 codecEnumWith = codecEnumHalves
 
 -- | What an all-nullary type has to satisfy.

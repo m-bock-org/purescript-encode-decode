@@ -2,7 +2,9 @@ module Test.Data.Json.CodecSpec (spec) where
 
 import Prelude
 
-import Data.Either (Either(..), isLeft)
+import Data.Either (Either(..))
+
+import Data.Either (isLeft) as Either
 import Data.Json.Codec (JsonCodec, codecArray, codecBoolean, codecInt, codecMaybe, codecRefine, codecString, decoder, encoder)
 import Data.Json.Codec.Record (codecOptional, codecRecord)
 import Data.Json.Codec.Sum (codecEnum, codecSum, codecSumWith)
@@ -33,6 +35,7 @@ type User =
 
 -- | Written once. Both directions come out of it, and the compiler
 -- | holds them to the same record type.
+-- | Private.
 codecUser :: JsonCodec User
 codecUser = codecRecord
   { name: codecString
@@ -49,6 +52,7 @@ derive newtype instance Show Slug
 
 -- | A refinement that can reject in one direction only, which is every
 -- | refinement.
+-- | Private.
 codecSlug :: JsonCodec Slug
 codecSlug = codecRefine narrow unwrap codecString
   where
@@ -56,8 +60,8 @@ codecSlug = codecRefine narrow unwrap codecString
     | s == "" = Left (TypeMismatch "a non-empty slug")
     | otherwise = Right (wrap s)
 
--- | Private. Round trip through both halves of one codec.
-roundTrip :: forall a. JsonCodec a -> a -> Either JsonDecodeError a
+-- | Private. Used only by `spec`.
+roundTrip :: ∀ a. JsonCodec a -> a -> Either JsonDecodeError a
 roundTrip c value = runDecode (decoder c) (runEncode (encoder c) value)
 
 data Shape
@@ -71,6 +75,7 @@ instance Show Shape where
   show = genericShow
 
 -- | Nullary, one argument and two, in one description.
+-- | Private.
 codecShape :: JsonCodec Shape
 codecShape = codecSum
   { "Circle": codecInt
@@ -85,11 +90,12 @@ derive instance Eq Mode
 instance Show Mode where
   show = genericShow
 
+-- | Private.
 codecMode :: JsonCodec Mode
 codecMode = codecEnum
 
--- | `Maybe` as key-presence rather than as `null` - the one default
 -- | that is a bijection, so the one a codec can carry.
+-- | Private.
 codecMaybeNick :: JsonCodec { name :: String, nickname :: Maybe String }
 codecMaybeNick = codecRecord
   { name: codecString
@@ -100,12 +106,14 @@ type Msg = Variant (newState :: Int, note :: String)
 
 -- | The shape the dashboard actually uses: a tagged case carrying one
 -- | value.
+-- | Private.
 codecMsg :: JsonCodec Msg
 codecMsg = codecVariant
   { newState: codecInt
   , note: codecString
   }
 
+-- | Uses `roundTrip`, `encodingWith`.
 spec :: Spec Unit
 spec = do
   describe "Data.Json.Codec" do
@@ -116,19 +124,10 @@ spec = do
     it "round-trips the absent case of a Maybe field" do
       let user = { name: "ada", age: 36, tags: [], nickname: Nothing }
       roundTrip codecUser user `shouldEqual` Right user
-
-    -- A round trip cannot catch a codec that agrees with itself on the
-    -- wrong names, because both halves are wrong together. Only a
-    -- document written by hand pins them.
     it "reads the field names a hand-written document uses" do
       runDecodeFromString (decoder codecUser)
         """{"name":"ada","age":36,"tags":["fp"],"nickname":null}"""
         `shouldEqual` Right { name: "ada", age: 36, tags: [ "fp" ], nickname: Nothing }
-
-    -- The codec layer is meant to be exactly the two directions,
-    -- assembled - not a third implementation that resembles them. This
-    -- is what says so, and what would break first if the split ever
-    -- started doing work of its own.
     it "agrees, byte for byte, with the two directions written apart" do
       let user = { name: "ada", age: 36, tags: [ "fp" ], nickname: Just "the countess" }
       let
@@ -166,7 +165,7 @@ spec = do
 
     it "rejects what the refinement rejects, on the decode side only" do
       runDecode (decoder codecSlug) (runEncode (encoder codecSlug) (Slug ""))
-        `shouldSatisfy` isLeft
+        `shouldSatisfy` Either.isLeft
 
   describe "Data.Json.Codec.Sum" do
     it "round-trips every constructor arity from one description" do
@@ -178,10 +177,6 @@ spec = do
       runDecodeFromString (decoder codecShape)
         """{"tag":"Rect","values":[2,"wide"]}"""
         `shouldEqual` Right (Rect 2 "wide")
-
-    -- The `Encoding` is the argument two hand-written directions are
-    -- most likely to disagree about, so it is the one worth changing in
-    -- a test: one argument moves both halves.
     it "moves both halves when the format changes" do
       let c = codecSumWith (encodingWith "kind") { "Circle": codecInt, "Rect": codecInt /\ codecString, "Blob": unit }
       runDecodeFromString (decoder (c :: JsonCodec Shape))
@@ -207,14 +202,26 @@ spec = do
 
     it "reports a broken payload rather than falling through to the next case" do
       runDecodeFromString (decoder codecMsg) """{"tag":"newState","value":"seven"}"""
-        `shouldSatisfy` isLeft
+        `shouldSatisfy` Either.isLeft
 
     it "round-trips an all-nullary type as a plain string" do
       roundTrip codecMode Simulation `shouldEqual` Right Simulation
       runDecodeFromString (decoder codecMode) "\"Realisation\"" `shouldEqual` Right Realisation
 
--- | Private. `defaultEncoding` with a different tag key.
+-- | Private. Used only by `spec`.
 encodingWith :: String -> Encoding
 encodingWith tagKey = case defaultEncoding of
   EncodeTagged r -> EncodeTagged (r { tagKey = tagKey })
   other -> other
+--
+-- `spec`
+-- A round trip cannot catch a codec that agrees with itself on the
+-- wrong names, because both halves are wrong together. Only a
+-- document written by hand pins them.
+-- The codec layer is meant to be exactly the two directions,
+-- assembled - not a third implementation that resembles them. This
+-- is what says so, and what would break first if the split ever
+-- started doing work of its own.
+-- The `Encoding` is the argument two hand-written directions are
+-- most likely to disagree about, so it is the one worth changing in
+-- a test: one argument moves both halves.

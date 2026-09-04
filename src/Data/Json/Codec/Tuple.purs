@@ -12,9 +12,8 @@ import Data.Json.Codec.Internal (class SplitCodec, splitDecoder, splitEncoder)
 import Data.Json.Decode.Tuple (class DecodeTupleParts, decodeTuple)
 import Data.Json.Encode.Tuple (class EncodeTupleParts, encodeTuple)
 
--- | `codecTuple (codecString /\ codecInt)` - the value tuple's type is
 -- | determined by the codec tuple's, so it never has to be written out.
-codecTuple :: forall cs t. CodecTuple cs t => cs -> JsonCodec t
+codecTuple :: ∀ cs t. CodecTuple cs t => cs -> JsonCodec t
 codecTuple = codecTupleHalves
 
 -- | What a tuple of codecs has to satisfy. No row list here: `SplitCodec`

@@ -34,10 +34,9 @@ import Data.Json.Decode
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested (type (/\), (/\))
 
--- | `decodeTuple (decodeString /\ decodeInt)` - the result tuple's type
 -- | is determined by the decoder tuple's, so it never has to be written
 -- | out.
-decodeTuple :: forall d t. DecodeTupleParts d t => d -> DecodeJson t
+decodeTuple :: ∀ d t. DecodeTupleParts d t => d -> DecodeJson t
 decodeTuple decoders = do
   jsons <- decodeArray decodeRawJson
   fromFn \_ -> gDecodeTupleParts 0 decoders jsons

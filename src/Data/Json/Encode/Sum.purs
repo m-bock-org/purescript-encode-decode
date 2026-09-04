@@ -37,7 +37,7 @@ module Data.Json.Encode.Sum
 
 import Prelude
 
-import Data.Array (catMaybes)
+import Data.Array (catMaybes) as Array
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments, Product(..), Sum(..), from)
 import Data.Json.Encode
   ( EncodeJson
@@ -62,13 +62,12 @@ import Type.Proxy (Proxy(..))
 -- Sum
 ----------------------------------------------------------------------------------------------------
 
--- | `encodeSumWith` at `defaultEncoding`.
-encodeSum :: forall r rep a. Generic a rep => EncodeCases r rep => Record r -> EncodeJson a
+-- | Uses `encodeSumWith`.
+encodeSum :: ∀ r rep a. Generic a rep => EncodeCases r rep => Record r -> EncodeJson a
 encodeSum = encodeSumWith defaultEncoding
 
--- | `encodeSum` with an explicit wire format - see `Encoding`.
 encodeSumWith
-  :: forall r rep a
+  :: ∀ r rep a
    . Generic a rep
   => EncodeCases r rep
   => Encoding
@@ -161,13 +160,13 @@ instance
 -- | For a `data` type whose constructors are *all* nullary: encodes to
 -- | a plain JSON string, not a tagged object. `data Mode = Simulation |
 -- | Realisation` becomes `"Simulation"` / `"Realisation"`.
-encodeEnum :: forall rep a. Generic a rep => EncodeEnum rep => EncodeJson a
+-- | Uses `encodeEnumWith`.
+encodeEnum :: ∀ rep a. Generic a rep => EncodeEnum rep => EncodeJson a
 encodeEnum = encodeEnumWith identity
 
--- | `encodeEnum`, with the constructor name rewritten before it hits
 -- | the wire - `lowerFirst`, say.
 encodeEnumWith
-  :: forall rep a
+  :: ∀ rep a
    . Generic a rep
   => EncodeEnum rep
   => (String -> String)
@@ -215,4 +214,4 @@ encodeSumCase encoding rawTag jsons = case encoding of
         many -> Just (valuesKey /\ runEncode (encodeArray encodeRawJson) many)
     in
       runEncode (encodeObject encodeRawJson)
-        (Obj.fromFoldable (catMaybes [ tagEntry, valuesEntry ]))
+        (Obj.fromFoldable (Array.catMaybes [ tagEntry, valuesEntry ]))

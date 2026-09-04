@@ -34,10 +34,9 @@ import Type.Proxy (Proxy(..))
 -- Decode
 ----------------------------------------------------------------------------------------------------
 
--- | `decodeRecord { name: decodeString } json` - `rs` is a record of
 -- | per-field decoders, matched against `json`'s own keys.
 decodeRecord
-  :: forall rl rs r
+  :: ∀ rl rs r
    . RowToList rs rl
   => DecodeRecord rl rs r
   => Record rs
@@ -135,11 +134,10 @@ data DecodeWithDefault a = DecodeWithDefault
   }
 
 -- | Build a `DecodeWithDefault` from a default value and a decoder.
-decodeWithDefault :: forall a. a -> DecodeJson a -> DecodeWithDefault a
+decodeWithDefault :: ∀ a. a -> DecodeJson a -> DecodeWithDefault a
 decodeWithDefault def dec = DecodeWithDefault { default: def, decode: dec }
 
 -- | A field whose absence means `Nothing` - the other half of
--- | `encodeOptional`.
 -- |
 -- | Written in terms of `decodeWithDefault` because that is all it is,
 -- | but it is worth its own name: every *other* default is one-way
@@ -151,7 +149,8 @@ decodeWithDefault def dec = DecodeWithDefault { default: def, decode: dec }
 -- | tolerant than `encodeOptional` is generous. That costs nothing that
 -- | matters: it is the *value* a round trip has to preserve, and both
 -- | spellings of absence decode to the same one.
-decodeOptional :: forall a. DecodeJson a -> DecodeWithDefault (Maybe a)
+-- | Uses `decodeWithDefault`.
+decodeOptional :: ∀ a. DecodeJson a -> DecodeWithDefault (Maybe a)
 decodeOptional dec = decodeWithDefault Nothing (decodeMaybe dec)
 
 -- | The `hmapWithIndex` "props" that pairs each field's plain decoder
@@ -168,26 +167,22 @@ instance decodeDefaultsMapping ::
   MappingWithIndex (DecodeDefaults defs) (Proxy sym) (DecodeJson a) (DecodeWithDefault a) where
   mappingWithIndex (DecodeDefaults defs) prop dec = decodeWithDefault (Record.get prop defs) dec
 
--- | `decodeRecord`, but every field falls back to its corresponding
 -- | value in `defs` when that field's key is missing from the JSON
 -- | object entirely - see `DecodeWithDefault`'s own doc comment for why
 -- | that's "missing", specifically, and not `null`. `defs` and `decs`
 -- | share field names but not field types (`defs`'s fields are the plain
 -- | values, `decs`'s are their decoders) - `hmapWithIndex`/
--- | `DecodeDefaults` is what lets them be zipped together field-by-field
 -- | despite each field having its own, different type, the same way
--- | `decodeRecord`/`encodeRecord` are already generic over per-field
 -- | types rather than requiring every field to share one.
 -- |
--- | ```purescript
 -- | decodeBook :: DecodeJson { title :: String, pages :: Int }
 -- | decodeBook = decodeRecordWithDefaults defaultBook
 -- |   { title: decodeString
 -- |   , pages: decodeInt
 -- |   }
--- | ```
+-- | Uses `decodeRecord`.
 decodeRecordWithDefaults
-  :: forall rl rdecsd r rdecs defs
+  :: ∀ rl rdecsd r rdecs defs
    . RowToList rdecsd rl
   => DecodeRecord rl rdecsd r
   => HMapWithIndex (DecodeDefaults defs) (Record rdecs) (Record rdecsd)
