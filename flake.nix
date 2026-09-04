@@ -13,6 +13,13 @@
     # in its closure - and flake.lock is then what pins the rule set,
     # which is a better pin than a rev pasted into a justfile.
     lint-regulator.url = "git+ssh://git@github.com/m-bock-org/purescript-lint-regulator";
+
+    # One al-dente in the closure, not two. Without this the linter
+    # brings its own pin along, and the workspace is then compiled by
+    # one version while the thing judging it was built by another - two
+    # toolchains to build and a difference that can only ever surprise
+    # someone.
+    lint-regulator.inputs.al-dente.follows = "al-dente";
   };
 
   outputs = { self, nixpkgs, flake-utils, al-dente, lint-regulator, ... }:
