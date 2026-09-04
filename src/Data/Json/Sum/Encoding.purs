@@ -12,8 +12,8 @@ module Data.Json.Sum.Encoding
 import Prelude
 
 import Data.Maybe (Maybe(..))
-import Data.String.CodeUnits (singleton, uncons) as SCU
-import Data.String.Common (toLower) as String
+import Data.String.CodeUnits (singleton, uncons) as Str
+import Data.String.Common (toLower) as Str
 
 -- | `EncodeTagged` puts the constructor name and its payload under two
 -- | sibling keys: `{ "tag": "Circle", "values": [...] }`. `EncodeNested`
@@ -58,7 +58,6 @@ defaultEncoding = EncodeTagged
 -- | ... }`.
 -- |
 -- | Different from `defaultEncoding` in two ways, both because a
--- | `Variant` case carries exactly one value where a constructor
 -- | carries any number - so the key is `value` rather than `values`,
 -- | and it is not wrapped in an array it could never have more than one
 -- | element in.
@@ -72,9 +71,8 @@ variantEncoding = EncodeTagged
   }
 
 -- | Lowercases the first character only - `"TradeTick"` becomes
--- | `"tradeTick"`. The usual `mapTag` for JSON that spells constructors
 -- | in camelCase.
 lowerFirst :: String -> String
-lowerFirst s = case SCU.uncons s of
+lowerFirst s = case Str.uncons s of
   Nothing -> s
-  Just { head, tail } -> String.toLower (SCU.singleton head) <> tail
+  Just { head, tail } -> Str.toLower (Str.singleton head) <> tail
