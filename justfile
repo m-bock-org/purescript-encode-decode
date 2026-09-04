@@ -28,8 +28,16 @@ test:
 # `--fix <command>` names a program that proposes fixes for findings the
 # style has guidance for. What that program talks to is its own
 # business; the linter judges what comes back.
+# Pinned, and it has to be. Unpinned, this fetched whatever the linter's
+# main happened to be when CI ran - so this repository could go red
+# without anyone touching it, and the rule set moved three times in one
+# afternoon. A gate that moves under you is not a gate.
+#
+# The pin lives in flake.lock now, not in a rev pasted here. This is the
+# same binary the `lint` check runs, so what you see locally is what a
+# pull request is held to.
 lint *ARGS:
-    nix run git+ssh://git@github.com/m-bock-org/purescript-lint-regulator#lint-public -- {{ARGS}}
+    nix run .#lint -- {{ARGS}}
 
 # The gate's build: warnings are errors. purs does not re-report a
 # warning for a module it did not recompile, so an incremental strict
@@ -53,11 +61,5 @@ check: strict test lint
 # copy, not symlinks: purs writes into output/<Module>/ in place, and a
 # read-only store symlink dies on the first local edit.
 output:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    built="$(nix build .#testOutput --no-link --print-out-paths)"
-    rm -rf output
-    cp -aL "$built" output
-    chmod -R u+w output
-    echo "output/ restored from $built"
+    nix run .#restoreOutput
 
