@@ -22,19 +22,18 @@ import Prim.RowList as RL
 import Record as Record
 import Type.Proxy (Proxy(..))
 
--- | `decodeVariant { newState: decodeState }` - one entry per case,
 -- | tried in turn until one claims the tag.
+-- | Uses `decodeVariantWith`.
 decodeVariant
-  :: forall rl ri ro
+  :: ∀ rl ri ro
    . RowToList ri rl
   => DecodeVariant rl ri ro
   => Record ri
   -> DecodeJson (Variant ro)
 decodeVariant = decodeVariantWith variantEncoding
 
--- | `decodeVariant` with an explicit wire format - see `Encoding`.
 decodeVariantWith
-  :: forall rl ri ro
+  :: ∀ rl ri ro
    . RowToList ri rl
   => DecodeVariant rl ri ro
   => Encoding

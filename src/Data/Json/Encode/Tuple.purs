@@ -24,10 +24,9 @@ import Data.Functor.Contravariant (cmap)
 import Data.Json.Encode (EncodeJson, Json, encodeArray, encodeRawJson, runEncode)
 import Data.Tuple.Nested (type (/\), (/\))
 
--- | `encodeTuple (encodeString /\ encodeInt)` - the value tuple's type
 -- | is determined by the encoder tuple's, so it never has to be written
 -- | out.
-encodeTuple :: forall e t. EncodeTupleParts e t => e -> EncodeJson t
+encodeTuple :: ∀ e t. EncodeTupleParts e t => e -> EncodeJson t
 encodeTuple encoders = cmap (gEncodeTupleParts encoders) (encodeArray encodeRawJson)
 
 -- | Generic derivation for `encodeTuple`, one position at a time.

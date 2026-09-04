@@ -26,18 +26,17 @@ import Prim.RowList as RL
 import Record as Record
 import Type.Proxy (Proxy(..))
 
--- | `encodeVariant { newState: encodeState }` - one entry per case.
+-- | Uses `encodeVariantWith`.
 encodeVariant
-  :: forall rl ri ro
+  :: ∀ rl ri ro
    . RowToList ri rl
   => EncodeVariant rl ri ro
   => Record ri
   -> EncodeJson (Variant ro)
 encodeVariant = encodeVariantWith variantEncoding
 
--- | `encodeVariant` with an explicit wire format - see `Encoding`.
 encodeVariantWith
-  :: forall rl ri ro
+  :: ∀ rl ri ro
    . RowToList ri rl
   => EncodeVariant rl ri ro
   => Encoding

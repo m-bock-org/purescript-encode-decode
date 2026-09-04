@@ -1,0 +1,184 @@
+{
+  "exempt": [],
+  "pending": [
+    {
+      "rule": "max-do-nesting-depth",
+      "modules": [
+        "Test.Data.Json.RecordSpec",
+        "Test.Data.Json.SumSpec",
+        "Test.Data.JsonSpec"
+      ],
+      "why": "BACKLOG (46 findings): do blocks nested deeper than the max, wanting an intermediate binding."
+    },
+    {
+      "rule": "max-delimiter-run",
+      "modules": [
+        "Data.Json.Codec.Internal",
+        "Data.Json.Decode",
+        "Data.Json.Decode.Sum",
+        "Data.Json.Decode.Tuple",
+        "Data.Json.Encode",
+        "Data.Json.Encode.Sum",
+        "Data.Json.Encode.Variant",
+        "Test.Data.JsonSpec"
+      ],
+      "why": "BACKLOG (42 findings): expressions built inline where a `let` would name the inner part."
+    },
+    {
+      "rule": "encode-decode-signature",
+      "modules": [
+        "Data.Json.Decode",
+        "Data.Json.Decode.Record",
+        "Data.Json.Decode.Sum",
+        "Data.Json.Decode.Tuple",
+        "Data.Json.Decode.Variant",
+        "Data.Json.Encode",
+        "Data.Json.Encode.Record",
+        "Data.Json.Encode.Sum",
+        "Data.Json.Encode.Tuple",
+        "Data.Json.Encode.Variant",
+        "Test.Data.Json.RecordSpec",
+        "Test.Data.Json.SumSpec",
+        "Test.Data.JsonSpec"
+      ],
+      "why": "BACKLOG (40 findings): a `decode`/`encode` name whose signature does not end with the type it names."
+    },
+    {
+      "rule": "single-line-signature",
+      "modules": [
+        "Data.Json.Codec",
+        "Data.Json.Codec.Variant",
+        "Data.Json.Decode",
+        "Data.Json.Decode.Record",
+        "Data.Json.Decode.Sum",
+        "Data.Json.Decode.Variant",
+        "Data.Json.Encode",
+        "Data.Json.Encode.Record",
+        "Data.Json.Encode.Sum",
+        "Data.Json.Encode.Variant"
+      ],
+      "why": "BACKLOG (17 findings): a signature spread over more lines than it needs."
+    },
+    {
+      "rule": "max-line-length",
+      "modules": [
+        "Data.Json.Decode.Sum",
+        "Data.Json.Encode.Sum",
+        "Test.Data.Json.CodecSpec",
+        "Test.Data.Json.RecordSpec",
+        "Test.Data.JsonSpec"
+      ],
+      "why": "BACKLOG (15 findings): lines over the width limit."
+    },
+    {
+      "rule": "require-do-ado-notation",
+      "modules": [
+        "Data.Json.Decode",
+        "Data.Json.Decode.Sum",
+        "Data.Json.Decode.Variant",
+        "Test.Data.JsonSpec"
+      ],
+      "why": "BACKLOG (11 findings): binds chained with operators where `do` reads plainly."
+    },
+    {
+      "rule": "no-json-codec-escape",
+      "modules": [
+        "Data.Json.Codec",
+        "Data.Json.Decode.Record",
+        "Data.Json.Decode.Sum",
+        "Data.Json.Decode.Tuple",
+        "Data.Json.Decode.Variant",
+        "Data.Json.Encode.Record",
+        "Data.Json.Encode.Sum",
+        "Data.Json.Encode.Variant",
+        "Test.Data.Json.RecordSpec"
+      ],
+      "why": "BACKLOG (9 findings): a codec reaching `fromFn` rather than composing combinators - this library is where the missing combinators would live, so these are the ones worth reading first."
+    },
+    {
+      "rule": "same-constructor-arm",
+      "modules": [
+        "Data.Json.Decode",
+        "Data.Json.Decode.Sum"
+      ],
+      "why": "BACKLOG (9 findings): case arms that build the same constructor and could share one."
+    },
+    {
+      "rule": "max-name-segments",
+      "modules": [
+        "Data.Json.Decode",
+        "Data.Json.Encode"
+      ],
+      "why": "BACKLOG (3 findings): names with more segments than the limit."
+    },
+    {
+      "rule": "max-block-nesting-depth",
+      "modules": [
+        "Data.Json.Encode.Sum"
+      ],
+      "why": "BACKLOG (2 findings): blocks nested deeper than the max."
+    },
+    {
+      "rule": "no-where-clauses",
+      "modules": [
+        "Data.Json.Decode.Sum",
+        "Test.Data.Json.CodecSpec"
+      ],
+      "why": "BACKLOG (2 findings): a `where` clause, where this style uses `let`."
+    },
+    {
+      "rule": "case-arm-layout",
+      "modules": [
+        "Data.Json.Decode.Sum"
+      ],
+      "why": "BACKLOG (1 findings): style debt."
+    },
+    {
+      "rule": "combinator-atoms",
+      "modules": [
+        "Data.Json.Encode"
+      ],
+      "why": "BACKLOG (1 findings): style debt."
+    },
+    {
+      "rule": "guarded-constructor-branch",
+      "modules": [
+        "Data.Json.Encode.Sum"
+      ],
+      "why": "BACKLOG (1 findings): style debt."
+    },
+    {
+      "rule": "no-stacked-maybe-either",
+      "modules": [
+        "Data.Json.Decode.Sum"
+      ],
+      "why": "BACKLOG (1 findings): a `Maybe` wrapped around an `Either` or the reverse."
+    },
+    {
+      "rule": "no-stuttering-name",
+      "modules": [
+        "Test.Data.JsonSpec"
+      ],
+      "why": "BACKLOG (1 findings): a name repeating its module or type."
+    },
+    {
+      "rule": "two-branch-guard",
+      "modules": [
+        "Test.Data.JsonSpec"
+      ],
+      "why": "BACKLOG (1 findings): a guard with two branches, which is an if/else."
+    },
+    {
+      "rule": "comment-policy",
+      "modules": [
+        "Data.Json.Decode",
+        "Data.Json.Decode.Sum",
+        "Data.Json.Encode",
+        "Test.Data.Json.CodecSpec",
+        "Test.Data.Json.SumSpec",
+        "Test.Data.JsonSpec"
+      ],
+      "why": "BACKLOG (50 findings): style debt."
+    }
+  ]
+}

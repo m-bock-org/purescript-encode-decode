@@ -103,12 +103,10 @@ instance Alt DecodeJson where
 -- | Wrap a raw decoding function. The escape hatch out of composition -
 -- | needed at the boundary where a `newtype` is built from a validated
 -- | primitive, or for a shape no combinator covers yet.
-fromFn :: forall a. (Json -> Either JsonDecodeError a) -> DecodeJson a
+fromFn :: ∀ a. (Json -> Either JsonDecodeError a) -> DecodeJson a
 fromFn = DecodeJson
 
 -- | Run a decoder against a `Json`. The counterpart of
--- | `Data.Json.Encode.runEncode`, and the runner to reach for when the
--- | `Json` is already in hand - nested in a larger structure, or handed
 -- | over by a library that speaks `Json` already - so there is no
 -- | document left to parse.
 -- |
@@ -116,13 +114,12 @@ fromFn = DecodeJson
 -- | rather than manufacturing one, so it cannot be used to smuggle a
 -- | hand-written `Json -> Either JsonDecodeError a` back into the
 -- | vocabulary.
-runDecode :: forall a. DecodeJson a -> Json -> Either JsonDecodeError a
+runDecode :: ∀ a. DecodeJson a -> Json -> Either JsonDecodeError a
 runDecode (DecodeJson f) = f
 
 -- | The decoder that does nothing: hands back the `Json` as it stands.
 -- | Distinct from `pure`, which ignores its input and yields a constant.
 -- | Use it to ask a container combinator for its raw contents, e.g.
--- | `decodeObject decodeRawJson` for an `Object Json`.
 decodeRawJson :: DecodeJson Json
 decodeRawJson = DecodeJson Right
 
@@ -131,19 +128,18 @@ decodeRawJson = DecodeJson Right
 -- | branch on it, and answer with this on the branch that has no reading.
 -- | Without it a dispatching decoder has to drop to `fromFn` just to
 -- | produce a `Left`.
-decodeFail :: forall a. JsonDecodeError -> DecodeJson a
+decodeFail :: ∀ a. JsonDecodeError -> DecodeJson a
 decodeFail err = DecodeJson \_ -> Left err
 
 -- | Decode, then narrow the result - a parse into a smarter type, a range
 -- | check, a lookup that can miss. The common shape behind "decode a
--- | `String` and then turn it into the thing it spells".
 -- |
 -- | This is the combinator that keeps refinement out of `fromFn`. The
 -- | refining function sees the decoded `a`, not the `Json`; when the error
 -- | wants to quote the original document, pair it in first - `Tuple <$>
 -- | decodeRawJson <*> decodeString` hands you both, because `DecodeJson`
 -- | is `Applicative`.
-decodeRefine :: forall a b. (a -> Either JsonDecodeError b) -> DecodeJson a -> DecodeJson b
+decodeRefine :: ∀ a b. (a -> Either JsonDecodeError b) -> DecodeJson a -> DecodeJson b
 decodeRefine f (DecodeJson g) = DecodeJson \json -> f =<< g json
 
 -- | Wrap whatever a decoder reports in a name, so an error says which
@@ -152,14 +148,14 @@ decodeRefine f (DecodeJson g) = DecodeJson \json -> f =<< g json
 -- | Cheap and worth it on anything a nested structure reaches for: the
 -- | difference between `at "euro": expected String` and `Euros > at
 -- | "euro": expected String` is knowing where to look.
-decodeNamed :: forall a. String -> DecodeJson a -> DecodeJson a
+decodeNamed :: ∀ a. String -> DecodeJson a -> DecodeJson a
 decodeNamed name (DecodeJson f) = DecodeJson (lmap (Named name) <<< f)
 
 -- | Run a decoder and hand back its *result*, success or failure, without
 -- | failing. For a field whose own decode failure must not abort the
 -- | document around it - an envelope whose error array explains why the
 -- | payload is unreadable, and would be lost if the payload aborted first.
-decodeAttempt :: forall a. DecodeJson a -> DecodeJson (Either JsonDecodeError a)
+decodeAttempt :: ∀ a. DecodeJson a -> DecodeJson (Either JsonDecodeError a)
 decodeAttempt (DecodeJson f) = DecodeJson (Right <<< f)
 
 -- | Run a decoder against a JSON document: parse and decode in one step.
@@ -170,9 +166,8 @@ decodeAttempt (DecodeJson f) = DecodeJson (Right <<< f)
 -- | At the edge where a `String` arrives - a file, a response body - this
 -- | is the whole journey, with no intermediate `Json` for a caller to
 -- | hold. A parse failure is reported as a `TypeMismatch`, since
--- | `jsonParser` explains itself in prose rather than in
--- | `JsonDecodeError`.
-runDecodeFromString :: forall a. DecodeJson a -> String -> Either JsonDecodeError a
+-- | Uses `runDecode`.
+runDecodeFromString :: ∀ a. DecodeJson a -> String -> Either JsonDecodeError a
 runDecodeFromString d raw = case Parser.jsonParser raw of
   Left err -> Left (TypeMismatch ("well-formed JSON, got: " <> err))
   Right json -> runDecode d json
@@ -201,14 +196,12 @@ decodeBoolean = DecodeJson Decoders.decodeBoolean
 -- Maybe
 ----------------------------------------------------------------------------------------------------
 
--- | `null` becomes `Nothing`, anything else goes through the decoder.
 -- | The mirror of `encodeMaybe`, and absent for a while only because
 -- | every consumer wrote it again locally.
 -- |
 -- | A *missing key* is the other convention and is not this: it is a
 -- | property of the record the field sits in, so it lives in
--- | `Data.Json.Decode.Record` as `decodeRecordWithDefaults`.
-decodeMaybe :: forall a. DecodeJson a -> DecodeJson (Maybe a)
+decodeMaybe :: ∀ a. DecodeJson a -> DecodeJson (Maybe a)
 decodeMaybe (DecodeJson f) = DecodeJson \json ->
   if Argonaut.isNull json then Right Nothing
   else map Just (f json)
@@ -218,7 +211,7 @@ decodeMaybe (DecodeJson f) = DecodeJson \json ->
 ----------------------------------------------------------------------------------------------------
 
 -- | Decode a JSON array, applying one decoder to every element.
-decodeArray :: forall a. DecodeJson a -> DecodeJson (Array a)
+decodeArray :: ∀ a. DecodeJson a -> DecodeJson (Array a)
 decodeArray (DecodeJson f) = DecodeJson (Decoders.decodeArray f)
 
 ----------------------------------------------------------------------------------------------------
@@ -229,30 +222,23 @@ decodeArray (DecodeJson f) = DecodeJson (Decoders.decodeArray f)
 -- | as-is) - unlike `Data.Json.Decode.Record`, this is for an object
 -- | whose *set* of keys isn't known ahead of time. Pass `decodeRawJson`
 -- | to get the raw, undecoded `Object Json` back.
-decodeObject :: forall a. DecodeJson a -> DecodeJson (Object a)
+decodeObject :: ∀ a. DecodeJson a -> DecodeJson (Object a)
 decodeObject (DecodeJson f) = DecodeJson (Decoders.decodeForeignObject f)
 
--- | `decodeObject` where each value's decoder may depend on its own key.
 -- | For a wire format whose keys are data and whose values are read in
 -- | terms of them - a response keyed by pair code, where the code belongs
 -- | in the decoded value.
-decodeObjectWithKey :: forall a. (String -> DecodeJson a) -> DecodeJson (Object a)
+-- | Uses `runDecode`, `decodeObject`.
+decodeObjectWithKey :: ∀ a. (String -> DecodeJson a) -> DecodeJson (Object a)
 decodeObjectWithKey f = DecodeJson \json -> do
   obj <- runDecode (decodeObject decodeRawJson) json
   Obj.fromFoldable <$> for (Obj.toUnfoldable obj :: Array (String /\ Json))
     (\(k /\ v) -> map (Tuple k) (runDecode (f k) v))
 
-----------------------------------------------------------------------------------------------------
--- Tuple
-----------------------------------------------------------------------------------------------------
-
-----------------------------------------------------------------------------------------------------
--- Map
-----------------------------------------------------------------------------------------------------
-
 -- | Decode a JSON object as a `Map k v`, parsing each key from its string.
+-- | Uses `decodeTupleArrayFromObject`.
 decodeMapFromObject
-  :: forall k v
+  :: ∀ k v
    . Ord k
   => (String -> Either JsonDecodeError k)
   -> DecodeJson v
@@ -267,8 +253,9 @@ decodeMapFromObject decodeK decodeV =
 -- | either side - and because the alternative is a hand-written walk
 -- | over `Object Json`, which is exactly what this library exists to
 -- | avoid. Key order follows `Foreign.Object.toUnfoldable`.
+-- | Uses `decodeObject`, `fromFn`, `runDecode`.
 decodeTupleArrayFromObject
-  :: forall k v
+  :: ∀ k v
    . (String -> Either JsonDecodeError k)
   -> DecodeJson v
   -> DecodeJson (Array (k /\ v))
@@ -288,3 +275,11 @@ decodeTupleArrayFromObject decodeK decodeV = do
 -- | the decoders above can run.
 jsonParser :: String -> Either String Json
 jsonParser = Parser.jsonParser
+--
+-- `decodeMapFromObject`
+-- --------------------------------------------------------------------------------------------------
+-- Tuple
+-- --------------------------------------------------------------------------------------------------
+-- --------------------------------------------------------------------------------------------------
+-- Map
+-- --------------------------------------------------------------------------------------------------

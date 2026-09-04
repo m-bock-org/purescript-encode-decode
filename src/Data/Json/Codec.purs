@@ -67,16 +67,16 @@ newtype JsonCodec a = JsonCodec
 -- | Pair two halves that already exist. The one way in from hand-written
 -- | directions, and the place where "these two agree" stops being
 -- | checked and starts being asserted.
-codec :: forall a. EncodeJson a -> DecodeJson a -> JsonCodec a
+codec :: ∀ a. EncodeJson a -> DecodeJson a -> JsonCodec a
 codec encode decode = JsonCodec { encode, decode }
 
 -- | The encoding half. Not an escape hatch - it is how a codec is
 -- | *used*, since running one means picking a direction.
-encoder :: forall a. JsonCodec a -> EncodeJson a
+encoder :: ∀ a. JsonCodec a -> EncodeJson a
 encoder (JsonCodec c) = c.encode
 
 -- | The decoding half.
-decoder :: forall a. JsonCodec a -> DecodeJson a
+decoder :: ∀ a. JsonCodec a -> DecodeJson a
 decoder (JsonCodec c) = c.decode
 
 -- | Move a codec to another type across a pair of total conversions -
@@ -87,16 +87,14 @@ decoder (JsonCodec c) = c.decode
 -- | consumes and produces its type, so neither `map` nor `>$<` can be
 -- | written for it. That is not a limitation to work around; it is the
 -- | reason the type is honest.
-codecInvmap :: forall a b. (a -> b) -> (b -> a) -> JsonCodec a -> JsonCodec b
+codecInvmap :: ∀ a b. (a -> b) -> (b -> a) -> JsonCodec a -> JsonCodec b
 codecInvmap to from (JsonCodec c) =
   JsonCodec { encode: from >$< c.encode, decode: map to c.decode }
 
--- | `codecInvmap` where only one direction can fail - a parse into a
 -- | smarter type, a range check, a lookup that can miss. The mirror of
--- | `decodeRefine`, and the shape every refinement has: narrowing can
 -- | reject, widening cannot.
 codecRefine
-  :: forall a b
+  :: ∀ a b
    . (a -> Either JsonDecodeError b)
   -> (b -> a)
   -> JsonCodec a
@@ -111,49 +109,56 @@ codecRefine narrow widen (JsonCodec c) =
 -- | combinator rather than a parameter of `codecRecord` - the name
 -- | belongs to one direction, and pretending otherwise would put it in
 -- | the signature of both.
-codecNamed :: forall a. String -> JsonCodec a -> JsonCodec a
+codecNamed :: ∀ a. String -> JsonCodec a -> JsonCodec a
 codecNamed name (JsonCodec c) = JsonCodec (c { decode = Decode.decodeNamed name c.decode })
 
 -- | A subtree carried through untouched.
+-- | Uses `codec`.
 codecRawJson :: JsonCodec Json
 codecRawJson = codec Encode.encodeRawJson Decode.decodeRawJson
 
+-- | Uses `codec`.
 codecString :: JsonCodec String
 codecString = codec Encode.encodeString Decode.decodeString
 
+-- | Uses `codec`.
 codecNumber :: JsonCodec Number
 codecNumber = codec Encode.encodeNumber Decode.decodeNumber
 
+-- | Uses `codec`.
 codecInt :: JsonCodec Int
 codecInt = codec Encode.encodeInt Decode.decodeInt
 
+-- | Uses `codec`.
 codecBoolean :: JsonCodec Boolean
 codecBoolean = codec Encode.encodeBoolean Decode.decodeBoolean
 
-codecArray :: forall a. JsonCodec a -> JsonCodec (Array a)
+-- | Uses `codec`, `encoder`, `decoder`.
+codecArray :: ∀ a. JsonCodec a -> JsonCodec (Array a)
 codecArray c = codec (Encode.encodeArray (encoder c)) (Decode.decodeArray (decoder c))
 
--- | `null` on the wire for `Nothing`, and a present value otherwise.
 -- |
 -- | An *absent key* is a different thing and has no codec: leaving a key
 -- | out on encode means the decoder needs a default when it is missing,
 -- | and defaults are the tolerance that only belongs on the decode side.
-codecMaybe :: forall a. JsonCodec a -> JsonCodec (Maybe a)
+-- | Uses `codec`, `encoder`, `decoder`.
+codecMaybe :: ∀ a. JsonCodec a -> JsonCodec (Maybe a)
 codecMaybe c = codec (Encode.encodeMaybe (encoder c)) (Decode.decodeMaybe (decoder c))
 
 -- | An object whose keys are data and whose values all share a type.
-codecObject :: forall a. JsonCodec a -> JsonCodec (Object a)
+-- | Uses `codec`, `encoder`, `decoder`.
+codecObject :: ∀ a. JsonCodec a -> JsonCodec (Object a)
 codecObject c = codec (Encode.encodeObject (encoder c)) (Decode.decodeObject (decoder c))
 
 -- | A `Map` with `String` keys, as a JSON object.
 -- |
--- | `String` keys only, and deliberately. Any other key type needs both
 -- | a `k -> String` and a `String -> Either JsonDecodeError k`, which
 -- | are not derivable from one another - so a codec would just be a pair
 -- | of functions the caller passes anyway, and the honest way to write
 -- | that is `Encode.encodeMapToObject` and `Decode.decodeMapFromObject`,
 -- | paired with `codec`.
-codecMapToObject :: forall a. JsonCodec a -> JsonCodec (Map String a)
+-- | Uses `codec`, `encoder`, `decoder`.
+codecMapToObject :: ∀ a. JsonCodec a -> JsonCodec (Map String a)
 codecMapToObject c = codec
   (Encode.encodeMapToObject identity (encoder c))
   (Decode.decodeMapFromObject Right (decoder c))

@@ -3,7 +3,8 @@ module Test.Data.JsonSpec (spec) where
 import Prelude
 
 import Data.Argonaut.Core (fromBoolean, fromNumber)
-import Data.Either (Either(..), isLeft)
+import Data.Either (Either(..))
+import Data.Either (isLeft) as Either
 import Data.Json.Decode
   ( DecodeJson
   , JsonDecodeError(..)
@@ -28,17 +29,19 @@ import Data.Json.Encode.Tuple (encodeTuple)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested ((/\))
-import Foreign.Object as Object
+import Foreign.Object as Obj
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual, shouldSatisfy)
 
 -- | A deliberately narrow key decoder for the Map tests - accepts only
 -- | "a"/"b", so a key outside that set fails the whole decode.
+-- | Private. Used only by `spec`.
 decodeKnownKey :: String -> Either JsonDecodeError String
 decodeKnownKey k
   | k == "a" || k == "b" = Right k
   | otherwise = Left (TypeMismatch ("unknown key: " <> k))
 
+-- | Uses `decodeKnownKey`.
 spec :: Spec Unit
 spec = do
   describe "Data.Json" do
@@ -50,7 +53,7 @@ spec = do
         Decode.runDecode decodeInt (Encode.runEncode encodeInt 42) `shouldEqual` Right 42
 
       it "rejects a non-integer JSON number as Int" do
-        Decode.runDecode decodeInt (fromNumber 1.5) `shouldSatisfy` isLeft
+        Decode.runDecode decodeInt (fromNumber 1.5) `shouldSatisfy` Either.isLeft
 
       it "decodes numbers and booleans" do
         Decode.runDecode decodeNumber (fromNumber 3.5) `shouldEqual` Right 3.5
@@ -63,7 +66,7 @@ spec = do
 
     describe "object" do
       it "round-trips an object, keys unchanged" do
-        let value = Object.fromFoldable [ "a" /\ 1, "b" /\ 2 ]
+        let value = Obj.fromFoldable [ "a" /\ 1, "b" /\ 2 ]
         Decode.runDecode (decodeObject decodeInt) (Encode.runEncode (encodeObject encodeInt) value)
           `shouldEqual` Right value
 
@@ -73,25 +76,18 @@ spec = do
         Decode.runDecode (decodeMapFromObject pure decodeInt)
           (Encode.runEncode (encodeMapToObject identity encodeInt) value)
           `shouldEqual` Right value
-
-      -- Unlike decodeObject, a Map's keys go through a decoder of their
-      -- own - so a bad key has to fail the whole decode, not just get
-      -- passed through the way a raw object's keys are.
       it "fails when a key doesn't decode" do
         Decode.runDecode (decodeMapFromObject decodeKnownKey decodeString)
           ( Encode.runEncode (encodeMapToObject identity encodeString)
               (Map.fromFoldable [ "nope" /\ "x" ])
           )
-          `shouldSatisfy` isLeft
+          `shouldSatisfy` Either.isLeft
 
       it "succeeds when every key decodes" do
         let value = Map.fromFoldable [ "a" /\ "x", "b" /\ "y" ]
         Decode.runDecode (decodeMapFromObject decodeKnownKey decodeString)
           (Encode.runEncode (encodeMapToObject identity encodeString) value)
           `shouldEqual` Right value
-
-    -- The shape a Map reduces to, on its own: an object whose keys are
-    -- data but whose value is an association list on both sides.
     describe "tuple-array object" do
       it "round-trips an association list as a JSON object" do
         let value = [ "a" /\ 1, "b" /\ 2 ]
@@ -102,7 +98,7 @@ spec = do
       it "fails when a key doesn't decode" do
         Decode.runDecode (decodeTupleArrayFromObject decodeKnownKey decodeInt)
           (Encode.runEncode (encodeTupleArrayToObject identity encodeInt) [ "nope" /\ 1 ])
-          `shouldSatisfy` isLeft
+          `shouldSatisfy` Either.isLeft
 
     describe "tuple" do
       it "round-trips a 2-tuple as a JSON array" do
@@ -113,11 +109,7 @@ spec = do
       it "rejects an array of the wrong length" do
         Decode.runDecode (decodeTuple (decodeString /\ decodeInt))
           (Encode.runEncode (encodeArray encodeInt) [ 1, 2, 3 ])
-          `shouldSatisfy` isLeft
-
-    -- The encoder on its own, asserted against exact wire text rather than
-    -- through a round-trip: a round-trip passes just as happily when both
-    -- sides are wrong in the same way.
+          `shouldSatisfy` Either.isLeft
     describe "n-tuple encoder" do
       it "writes a 2-tuple as a flat 2-element array" do
         stringify (Encode.runEncode (encodeTuple (encodeString /\ encodeInt)) ("a" /\ 1))
@@ -191,12 +183,12 @@ spec = do
       it "rejects an array shorter than the tuple" do
         Decode.runDecode (decodeTuple (decodeInt /\ decodeInt /\ decodeInt))
           (Encode.runEncode (encodeArray encodeInt) [ 1, 2 ])
-          `shouldSatisfy` isLeft
+          `shouldSatisfy` Either.isLeft
 
       it "rejects an array longer than the tuple, rather than dropping the surplus" do
         Decode.runDecode (decodeTuple (decodeInt /\ decodeInt))
           (Encode.runEncode (encodeArray encodeInt) [ 1, 2, 3 ])
-          `shouldSatisfy` isLeft
+          `shouldSatisfy` Either.isLeft
 
       it "reports the failing position" do
         Decode.runDecode (decodeTuple (decodeInt /\ decodeString /\ decodeInt))
@@ -210,7 +202,7 @@ spec = do
 
     it "reports malformed JSON as a decode error, not a crash" do
       (D.runDecodeFromString decodeInt "{not json" :: Either JsonDecodeError Int)
-        `shouldSatisfy` isLeft
+        `shouldSatisfy` Either.isLeft
 
     it "still reports a decode failure on well-formed JSON" do
       (D.runDecodeFromString decodeInt """"nope"""" :: Either JsonDecodeError Int)
@@ -262,11 +254,11 @@ spec = do
     it "gives each value a decoder chosen by its own key" do
       let dec = D.decodeObjectWithKey \k -> map (\n -> k <> "=" <> show n) decodeInt
       D.runDecodeFromString dec """{"a":1,"b":2}"""
-        `shouldEqual` Right (Object.fromFoldable [ "a" /\ "a=1", "b" /\ "b=2" ])
+        `shouldEqual` Right (Obj.fromFoldable [ "a" /\ "a=1", "b" /\ "b=2" ])
 
     it "fails on the first value its own key's decoder rejects" do
       let dec = D.decodeObjectWithKey \k -> if k == "a" then decodeInt else D.decodeFail (TypeMismatch k)
-      (D.runDecodeFromString dec """{"a":1,"b":2}""" :: Either JsonDecodeError (Object.Object Int))
+      (D.runDecodeFromString dec """{"a":1,"b":2}""" :: Either JsonDecodeError (Obj.Object Int))
         `shouldEqual` Left (TypeMismatch "b")
 
   describe "encodeDispatch" do
@@ -298,3 +290,13 @@ spec = do
     it "nests inside a record like any other field encoder" do
       E.runEncodeToString (encodeRecord { a: E.encodeMaybe encodeInt }) { a: Nothing }
         `shouldEqual` """{"a":null}"""
+--
+-- `spec`
+-- Unlike decodeObject, a Map's keys go through a decoder of their
+-- own - so a bad key has to fail the whole decode, not just get
+-- passed through the way a raw object's keys are.
+-- The shape a Map reduces to, on its own: an object whose keys are
+-- data but whose value is an association list on both sides.
+-- The encoder on its own, asserted against exact wire text rather than
+-- through a round-trip: a round-trip passes just as happily when both
+-- sides are wrong in the same way.
