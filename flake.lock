@@ -7,11 +7,11 @@
         "purescript-overlay": "purescript-overlay"
       },
       "locked": {
-        "lastModified": 1788521443,
-        "narHash": "sha256-w2Stu71MGVqB4VVwy4R1gaKmt9jrGr1lWYMEq3dHpts=",
+        "lastModified": 1788626317,
+        "narHash": "sha256-XBBD1wHqVah9dGgecXOT68WpTxIE6jwvseA/0rbnxqM=",
         "ref": "refs/heads/main",
-        "rev": "9d82aa878332a5f7301c0ae76d13686982245a18",
-        "revCount": 39,
+        "rev": "5e83437ff5239e2ee7f51bf913e88bc781cf6a00",
+        "revCount": 49,
         "type": "git",
         "url": "ssh://git@github.com/m-bock-org/al-dente"
       },
@@ -87,6 +87,23 @@
       "original": {
         "owner": "numtide",
         "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "lint-purs": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788166401,
+        "narHash": "sha256-NUu4cVmhy80hvMjYnWI/LOTe+dE/tX8pS1ODlhD4etA=",
+        "owner": "m-bock",
+        "repo": "purescript-lint",
+        "rev": "a047b117fe376b60402beb794da3cfae5366e994",
+        "type": "github"
+      },
+      "original": {
+        "owner": "m-bock",
+        "repo": "purescript-lint",
+        "rev": "a047b117fe376b60402beb794da3cfae5366e994",
         "type": "github"
       }
     },
@@ -186,6 +203,7 @@
       "inputs": {
         "al-dente": "al-dente",
         "flake-utils": "flake-utils_2",
+        "lint-purs": "lint-purs",
         "lint-regulator": "lint-regulator",
         "nixpkgs": "nixpkgs_3"
       }

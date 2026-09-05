@@ -20,9 +20,15 @@
     # toolchains to build and a difference that can only ever surprise
     # someone.
     lint-regulator.inputs.al-dente.follows = "al-dente";
+
+    # Generated from spago.lock by `just inputs-sync` - every git
+    # dependency needs one, because evaluation does not fetch.
+    # al-dente:git-inputs:begin
+    "lint-purs" = { url = "github:m-bock/purescript-lint/a047b117fe376b60402beb794da3cfae5366e994"; flake = false; };
+    # al-dente:git-inputs:end
   };
 
-  outputs = { self, nixpkgs, flake-utils, al-dente, lint-regulator, ... }:
+  outputs = inputs@{ self, nixpkgs, flake-utils, al-dente, lint-regulator, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -35,6 +41,11 @@
         workspace = lib.mkWorkspace {
           src = ./.;
           name = "encode-decode";
+          gitPaths = {
+            # al-dente:git-paths:begin
+            "lint-purs" = inputs."lint-purs";
+            # al-dente:git-paths:end
+          };
         };
       in
       {
@@ -66,6 +77,10 @@
         # 541-module rebuild, and it is the granularity this workspace
         # is built to have.
         packages.restoreOutput = lib.mkRestore { output = workspace.testOutput; };
+
+        # Writes this flake's git inputs from spago.lock, so the
+        # revision is recorded once rather than in two files.
+        packages.syncFlakeInputs = lib.syncInputs;
 
         checks = {
           # The public style, as a derivation. `just lint` runs the same
