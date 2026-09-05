@@ -21,6 +21,7 @@ module Data.Json.Decode
   , DecodeJson
   , fromFn
   , runDecode
+  , lazyDecoder
   , decodeRawJson
   , decodeFail
   , decodeRefine
@@ -116,6 +117,25 @@ fromFn = DecodeJson
 -- | vocabulary.
 runDecode :: ∀ a. DecodeJson a -> Json -> Either JsonDecodeError a
 runDecode (DecodeJson f) = f
+
+-- | A decoder built from itself, for a recursive type.
+-- |
+-- | `decodeFoo = decodeArray decodeFoo` does not compile: PureScript
+-- | refuses a top-level value that reaches itself with nothing in
+-- | between (`CycleInDeclaration`), because evaluating the right-hand
+-- | side would require the right-hand side already evaluated. A `Unit ->
+-- | DecodeJson a` breaks that: the reference inside is only forced once
+-- | `lazyDecoder` is applied, by which point `decodeFoo` already exists.
+-- |
+-- | Not `fromFn` in application code - this wraps it once, here, so a
+-- | recursive type never has to reach past the vocabulary.
+-- |
+-- | ```purescript
+-- | decodeFoo :: DecodeJson Foo
+-- | decodeFoo = lazyDecoder \_ -> decodeArray decodeFoo
+-- | ```
+lazyDecoder :: ∀ a. (Unit -> DecodeJson a) -> DecodeJson a
+lazyDecoder mkDecoder = fromFn \json -> runDecode (mkDecoder unit) json
 
 -- | The decoder that does nothing: hands back the `Json` as it stands.
 -- | Distinct from `pure`, which ignores its input and yields a constant.
