@@ -21,7 +21,7 @@ module Data.Json.Decode
   , DecodeJson
   , fromFn
   , runDecode
-  , fixDecoder
+  , decodeFix
   , decodeRawJson
   , decodeFail
   , decodeRefine
@@ -137,10 +137,10 @@ runDecode (DecodeJson f) = f
 -- |
 -- | ```purescript
 -- | decodeFoo :: DecodeJson Foo
--- | decodeFoo = fixDecoder \self -> decodeArray self
+-- | decodeFoo = decodeFix \self -> decodeArray self
 -- | ```
-fixDecoder :: ∀ a. (DecodeJson a -> DecodeJson a) -> DecodeJson a
-fixDecoder f = fromFn \json -> runDecode (f (fixDecoder f)) json
+decodeFix :: ∀ a. (DecodeJson a -> DecodeJson a) -> DecodeJson a
+decodeFix f = fromFn \json -> runDecode (f (decodeFix f)) json
 
 -- | The decoder that does nothing: hands back the `Json` as it stands.
 -- | Distinct from `pure`, which ignores its input and yields a constant.

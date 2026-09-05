@@ -89,8 +89,8 @@ decoder (JsonCodec c) = c.decode
 -- | written for it. That is not a limitation to work around; it is the
 -- | reason the type is honest.
 -- | A codec defined in terms of itself, for a recursive type - the
--- | pair of `Data.Json.Encode.fixEncoder` and
--- | `Data.Json.Decode.fixDecoder`, and the same shape as
+-- | pair of `Data.Json.Encode.encodeFix` and
+-- | `Data.Json.Decode.decodeFix`, and the same shape as
 -- | `Data.Codec.Argonaut.fix`.
 -- |
 -- | ```purescript

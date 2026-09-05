@@ -16,7 +16,7 @@ import Data.Json.Decode
   , decodeObject
   , decodeString
   , decodeTupleArrayFromObject
-  , fixDecoder
+  , decodeFix
   )
 import Data.Json.Decode (runDecode) as Decode
 import Data.Json.Decode (decodeAttempt, decodeFail, runDecodeFromString, decodeObjectWithKey, decodeRefine) as D
@@ -31,7 +31,7 @@ import Data.Json.Encode
   , encodeObject
   , encodeString
   , encodeTupleArrayToObject
-  , fixEncoder
+  , encodeFix
   , stringify
   )
 import Data.Json.Encode (runEncode) as Encode
@@ -53,7 +53,7 @@ decodeKnownKey k
   | k == "a" || k == "b" = Right k
   | otherwise = Left (TypeMismatch ("unknown key: " <> k))
 
--- | A recursive type - the shape `fixEncoder`/`fixDecoder` exist
+-- | A recursive type - the shape `encodeFix`/`decodeFix` exist
 -- | for. Each node holds a value and any number of children, so its
 -- | own codec has to mention itself.
 -- | Private. Used only by `spec`.
@@ -64,19 +64,19 @@ derive instance Eq Tree
 instance Show Tree where
   show (Node n children) = "Node " <> show n <> " " <> show children
 
--- | The recursive reference is `self`, bound by `fixEncoder` - a bare
+-- | The recursive reference is `self`, bound by `encodeFix` - a bare
 -- | `encodeArray encodeTree` inside `encodeTree` would be a
 -- | `CycleInDeclaration`.
--- | Private. Used only by `spec`. Uses `fixEncoder`.
+-- | Private. Used only by `spec`. Uses `encodeFix`.
 encodeTree :: EncodeJson Tree
-encodeTree = fixEncoder \self -> E.encodeDispatch case _ of
+encodeTree = encodeFix \self -> E.encodeDispatch case _ of
   Node n children -> E.encoded
     (encodeRecord { value: encodeInt, children: encodeArray self })
     { value: n, children }
 
--- | Private. Used only by `spec`. Uses `fixDecoder`.
+-- | Private. Used only by `spec`. Uses `decodeFix`.
 decodeTree :: DecodeJson Tree
-decodeTree = fixDecoder \self ->
+decodeTree = decodeFix \self ->
   map (\r -> Node r.value r.children)
     (decodeRecord { value: decodeInt, children: decodeArray self })
 
@@ -330,7 +330,7 @@ spec = do
       E.runEncodeToString (encodeRecord { a: E.encodeMaybe encodeInt }) { a: Nothing }
         `shouldEqual` """{"a":null}"""
 
-  describe "fixEncoder / fixDecoder" do
+  describe "encodeFix / decodeFix" do
     it "round-trips a recursive type through itself" do
       let value = Node 1 [ Node 2 [], Node 3 [ Node 4 [] ] ]
       Decode.runDecode decodeTree (Encode.runEncode encodeTree value) `shouldEqual` Right value
