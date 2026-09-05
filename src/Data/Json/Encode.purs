@@ -19,6 +19,7 @@ module Data.Json.Encode
   , EncodeJson
   , fromFn
   , runEncode
+  , encodeFix
   , encodeRawJson
   , Encoded
   , encoded
@@ -87,6 +88,17 @@ fromFn = EncodeJson
 -- | hand-written `a -> Json` back into the vocabulary.
 runEncode :: ∀ a. EncodeJson a -> a -> Json
 runEncode (EncodeJson f) = f
+
+-- | An encoder defined in terms of itself, for a recursive type. See
+-- | `Data.Json.Decode.decodeFix` - same reason, same shape, the other
+-- | direction.
+-- |
+-- | ```purescript
+-- | encodeFoo :: EncodeJson Foo
+-- | encodeFoo = encodeFix \self -> encodeArray self
+-- | ```
+encodeFix :: ∀ a. (EncodeJson a -> EncodeJson a) -> EncodeJson a
+encodeFix f = fromFn \a -> runEncode (f (encodeFix f)) a
 
 -- | The encoder that does nothing: puts an already-built `Json` in
 -- | place. Use it to hand a container combinator contents that are

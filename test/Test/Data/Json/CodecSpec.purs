@@ -5,7 +5,19 @@ import Prelude
 import Data.Either (Either(..))
 
 import Data.Either (isLeft) as Either
-import Data.Json.Codec (JsonCodec, codecArray, codecBoolean, codecInt, codecMaybe, codecRefine, codecString, decoder, encoder)
+import Data.Json.Codec
+  ( JsonCodec
+  , codecArray
+  , codecBoolean
+  , codecFix
+  , codecInvmap
+  , codecInt
+  , codecMaybe
+  , codecRefine
+  , codecString
+  , decoder
+  , encoder
+  )
 import Data.Json.Codec.Record (codecOptional, codecRecord)
 import Data.Json.Codec.Sum (codecEnum, codecSum, codecSumWith)
 import Data.Json.Codec.Variant (codecVariant)
@@ -25,6 +37,46 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual, shouldSatisfy)
+
+-- | A recursive type, for `codecFix`. A list spelled as a type that
+-- | mentions itself, which is the smallest thing that cannot have a
+-- | codec written as a plain top-level value.
+-- | Private. Used only by `spec`.
+data Chain = Nil | Cons Int Chain
+
+derive instance Eq Chain
+derive instance Generic Chain _
+
+instance Show Chain where
+  show c = genericShow c
+
+-- | The record shape a `Chain` is written as, named because both
+-- | directions of `codecChain` mention it.
+-- | Private. Used only by `spec`.
+type ChainParts = { head :: Maybe Int, tail :: Maybe Chain }
+
+-- | The recursive reference is `self`, bound by `codecFix`. Encoding
+-- | `Nil` as absent fields rather than a tag keeps this a record codec
+-- | at every level, so what the fixed point re-enters is the same
+-- | shape each time.
+-- | Private. Used only by `spec`. Uses `codecFix`.
+codecChain :: JsonCodec Chain
+codecChain = codecFix \self ->
+  codecInvmap fromParts toParts
+    (codecRecord { head: codecOptional codecInt, tail: codecOptional self })
+
+-- | Private. Used only by `codecChain`.
+fromParts :: ChainParts -> Chain
+fromParts parts = case parts.head, parts.tail of
+  Just n, Just rest -> Cons n rest
+  Just n, Nothing -> Cons n Nil
+  Nothing, _ -> Nil
+
+-- | Private. Used only by `codecChain`.
+toParts :: Chain -> ChainParts
+toParts = case _ of
+  Nil -> { head: Nothing, tail: Nothing }
+  Cons n rest -> { head: Just n, tail: Just rest }
 
 type User =
   { name :: String
@@ -166,6 +218,14 @@ spec = do
     it "rejects what the refinement rejects, on the decode side only" do
       runDecode (decoder codecSlug) (runEncode (encoder codecSlug) (Slug ""))
         `shouldSatisfy` Either.isLeft
+
+    it "round-trips a recursive type through codecFix" do
+      let value = Cons 1 (Cons 2 (Cons 3 Nil))
+      roundTrip codecChain value `shouldEqual` Right value
+
+    it "keeps both halves of a fixed codec in step" do
+      runEncodeToString (encoder codecChain) (Cons 1 Nil)
+        `shouldEqual` """{"tail":{},"head":1}"""
 
   describe "Data.Json.Codec.Sum" do
     it "round-trips every constructor arity from one description" do
