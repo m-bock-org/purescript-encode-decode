@@ -16,7 +16,7 @@ import Data.Json.Decode
   , decodeObject
   , decodeString
   , decodeTupleArrayFromObject
-  , lazyDecoder
+  , fixDecoder
   )
 import Data.Json.Decode (runDecode) as Decode
 import Data.Json.Decode (decodeAttempt, decodeFail, runDecodeFromString, decodeObjectWithKey, decodeRefine) as D
@@ -31,7 +31,7 @@ import Data.Json.Encode
   , encodeObject
   , encodeString
   , encodeTupleArrayToObject
-  , lazyEncoder
+  , fixEncoder
   , stringify
   )
 import Data.Json.Encode (runEncode) as Encode
@@ -53,7 +53,7 @@ decodeKnownKey k
   | k == "a" || k == "b" = Right k
   | otherwise = Left (TypeMismatch ("unknown key: " <> k))
 
--- | A recursive type - the shape `lazyEncoder`/`lazyDecoder` exist
+-- | A recursive type - the shape `fixEncoder`/`fixDecoder` exist
 -- | for. Each node holds a value and any number of children, so its
 -- | own codec has to mention itself.
 -- | Private. Used only by `spec`.
@@ -64,21 +64,21 @@ derive instance Eq Tree
 instance Show Tree where
   show (Node n children) = "Node " <> show n <> " " <> show children
 
--- | Reaches `encodeTree` from inside its own construction - the exact
--- | shape a bare `encodeArray (encodeRecord ...) encodeTree` cannot be,
--- | since that would be a `CycleInDeclaration`. Uses `lazyEncoder`.
--- | Private. Used only by `spec`.
+-- | The recursive reference is `self`, bound by `fixEncoder` - a bare
+-- | `encodeArray encodeTree` inside `encodeTree` would be a
+-- | `CycleInDeclaration`.
+-- | Private. Used only by `spec`. Uses `fixEncoder`.
 encodeTree :: EncodeJson Tree
-encodeTree = lazyEncoder \_ -> E.encodeDispatch case _ of
+encodeTree = fixEncoder \self -> E.encodeDispatch case _ of
   Node n children -> E.encoded
-    (encodeRecord { value: encodeInt, children: encodeArray encodeTree })
+    (encodeRecord { value: encodeInt, children: encodeArray self })
     { value: n, children }
 
--- | Private. Used only by `spec`. Uses `lazyDecoder`.
+-- | Private. Used only by `spec`. Uses `fixDecoder`.
 decodeTree :: DecodeJson Tree
-decodeTree = lazyDecoder \_ ->
+decodeTree = fixDecoder \self ->
   map (\r -> Node r.value r.children)
-    (decodeRecord { value: decodeInt, children: decodeArray decodeTree })
+    (decodeRecord { value: decodeInt, children: decodeArray self })
 
 -- | Uses `decodeKnownKey`.
 spec :: Spec Unit
@@ -330,14 +330,19 @@ spec = do
       E.runEncodeToString (encodeRecord { a: E.encodeMaybe encodeInt }) { a: Nothing }
         `shouldEqual` """{"a":null}"""
 
-  describe "lazyEncoder / lazyDecoder" do
+  describe "fixEncoder / fixDecoder" do
     it "round-trips a recursive type through itself" do
       let value = Node 1 [ Node 2 [], Node 3 [ Node 4 [] ] ]
       Decode.runDecode decodeTree (Encode.runEncode encodeTree value) `shouldEqual` Right value
 
+    it "recurses past one level, so the fixed point is really re-entered" do
+      let deep = Node 1 [ Node 2 [ Node 3 [ Node 4 [] ] ] ]
+      Decode.runDecode decodeTree (Encode.runEncode encodeTree deep) `shouldEqual` Right deep
+
     it "fails the same way a non-recursive decoder would, on a bad leaf" do
-      (Decode.runDecode decodeTree (Encode.runEncode (encodeArray encodeInt) [ 1, 2 ]) :: Either JsonDecodeError Tree)
-        `shouldSatisfy` Either.isLeft
+      ( Decode.runDecode decodeTree (Encode.runEncode (encodeArray encodeInt) [ 1, 2 ])
+          :: Either JsonDecodeError Tree
+      ) `shouldSatisfy` Either.isLeft
 --
 -- `spec`
 -- Unlike decodeObject, a Map's keys go through a decoder of their

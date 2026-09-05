@@ -28,6 +28,7 @@ module Data.Json.Codec
   , codec
   , encoder
   , decoder
+  , codecFix
   , codecInvmap
   , codecRefine
   , codecNamed
@@ -87,6 +88,26 @@ decoder (JsonCodec c) = c.decode
 -- | consumes and produces its type, so neither `map` nor `>$<` can be
 -- | written for it. That is not a limitation to work around; it is the
 -- | reason the type is honest.
+-- | A codec defined in terms of itself, for a recursive type - the
+-- | pair of `Data.Json.Encode.fixEncoder` and
+-- | `Data.Json.Decode.fixDecoder`, and the same shape as
+-- | `Data.Codec.Argonaut.fix`.
+-- |
+-- | ```purescript
+-- | codecFoo :: JsonCodec Foo
+-- | codecFoo = codecFix \self -> codecArray self
+-- | ```
+-- | `f (codecFix f)` must stay *inside* both lambdas. Lifting it into
+-- | a `let` above them reads as the obvious tidy-up and is an infinite
+-- | loop: the binding is forced as soon as `codecFix f` is evaluated,
+-- | before anything has a `Json` to work on. Written this way it is
+-- | only reached once an encode or a decode actually runs, which is
+-- | what stops the recursion.
+codecFix :: ∀ a. (JsonCodec a -> JsonCodec a) -> JsonCodec a
+codecFix f = codec
+  (Encode.fromFn \a -> Encode.runEncode (encoder $ f $ codecFix f) a)
+  (Decode.fromFn \json -> Decode.runDecode (decoder $ f $ codecFix f) json)
+
 codecInvmap :: ∀ a b. (a -> b) -> (b -> a) -> JsonCodec a -> JsonCodec b
 codecInvmap to from (JsonCodec c) =
   JsonCodec { encode: from >$< c.encode, decode: map to c.decode }
