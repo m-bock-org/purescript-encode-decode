@@ -16,12 +16,24 @@ import Data.Json.Decode
   , decodeObject
   , decodeString
   , decodeTupleArrayFromObject
+  , decodeFix
   )
 import Data.Json.Decode (runDecode) as Decode
 import Data.Json.Decode (decodeAttempt, decodeFail, runDecodeFromString, decodeObjectWithKey, decodeRefine) as D
 import Data.Json.Decode.Record (decodeRecord)
 import Data.Json.Decode.Tuple (decodeTuple)
-import Data.Json.Encode (encodeArray, encodeBoolean, encodeInt, encodeMapToObject, encodeObject, encodeString, encodeTupleArrayToObject, stringify)
+import Data.Json.Encode
+  ( EncodeJson
+  , encodeArray
+  , encodeBoolean
+  , encodeInt
+  , encodeMapToObject
+  , encodeObject
+  , encodeString
+  , encodeTupleArrayToObject
+  , encodeFix
+  , stringify
+  )
 import Data.Json.Encode (runEncode) as Encode
 import Data.Json.Encode (encodeDispatch, encodeMaybe, runEncodeToString, encoded) as E
 import Data.Json.Encode.Record (encodeRecord)
@@ -40,6 +52,33 @@ decodeKnownKey :: String -> Either JsonDecodeError String
 decodeKnownKey k
   | k == "a" || k == "b" = Right k
   | otherwise = Left (TypeMismatch ("unknown key: " <> k))
+
+-- | A recursive type - the shape `encodeFix`/`decodeFix` exist
+-- | for. Each node holds a value and any number of children, so its
+-- | own codec has to mention itself.
+-- | Private. Used only by `spec`.
+data Tree = Node Int (Array Tree)
+
+derive instance Eq Tree
+
+instance Show Tree where
+  show (Node n children) = "Node " <> show n <> " " <> show children
+
+-- | The recursive reference is `self`, bound by `encodeFix` - a bare
+-- | `encodeArray encodeTree` inside `encodeTree` would be a
+-- | `CycleInDeclaration`.
+-- | Private. Used only by `spec`. Uses `encodeFix`.
+encodeTree :: EncodeJson Tree
+encodeTree = encodeFix \self -> E.encodeDispatch case _ of
+  Node n children -> E.encoded
+    (encodeRecord { value: encodeInt, children: encodeArray self })
+    { value: n, children }
+
+-- | Private. Used only by `spec`. Uses `decodeFix`.
+decodeTree :: DecodeJson Tree
+decodeTree = decodeFix \self ->
+  map (\r -> Node r.value r.children)
+    (decodeRecord { value: decodeInt, children: decodeArray self })
 
 -- | Uses `decodeKnownKey`.
 spec :: Spec Unit
@@ -290,6 +329,20 @@ spec = do
     it "nests inside a record like any other field encoder" do
       E.runEncodeToString (encodeRecord { a: E.encodeMaybe encodeInt }) { a: Nothing }
         `shouldEqual` """{"a":null}"""
+
+  describe "encodeFix / decodeFix" do
+    it "round-trips a recursive type through itself" do
+      let value = Node 1 [ Node 2 [], Node 3 [ Node 4 [] ] ]
+      Decode.runDecode decodeTree (Encode.runEncode encodeTree value) `shouldEqual` Right value
+
+    it "recurses past one level, so the fixed point is really re-entered" do
+      let deep = Node 1 [ Node 2 [ Node 3 [ Node 4 [] ] ] ]
+      Decode.runDecode decodeTree (Encode.runEncode encodeTree deep) `shouldEqual` Right deep
+
+    it "fails the same way a non-recursive decoder would, on a bad leaf" do
+      ( Decode.runDecode decodeTree (Encode.runEncode (encodeArray encodeInt) [ 1, 2 ])
+          :: Either JsonDecodeError Tree
+      ) `shouldSatisfy` Either.isLeft
 --
 -- `spec`
 -- Unlike decodeObject, a Map's keys go through a decoder of their
