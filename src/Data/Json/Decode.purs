@@ -120,7 +120,6 @@ runDecode (DecodeJson f) = f
 
 -- | A decoder defined in terms of itself, for a recursive type.
 -- |
--- | `decodeFoo = decodeArray decodeFoo` does not compile: PureScript
 -- | refuses a top-level value that reaches itself with nothing in
 -- | between (`CycleInDeclaration`), because evaluating the right-hand
 -- | side would require the right-hand side already evaluated. Taking
@@ -135,10 +134,9 @@ runDecode (DecodeJson f) = f
 -- | Not `fromFn` in application code - this wraps it once, here, so a
 -- | recursive type never has to reach past the vocabulary.
 -- |
--- | ```purescript
 -- | decodeFoo :: DecodeJson Foo
 -- | decodeFoo = decodeFix \self -> decodeArray self
--- | ```
+-- | Uses `fromFn`, `runDecode`.
 decodeFix :: ∀ a. (DecodeJson a -> DecodeJson a) -> DecodeJson a
 decodeFix f = fromFn \json -> runDecode (f (decodeFix f)) json
 

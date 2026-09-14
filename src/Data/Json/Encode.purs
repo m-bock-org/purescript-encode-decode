@@ -90,13 +90,11 @@ runEncode :: ∀ a. EncodeJson a -> a -> Json
 runEncode (EncodeJson f) = f
 
 -- | An encoder defined in terms of itself, for a recursive type. See
--- | `Data.Json.Decode.decodeFix` - same reason, same shape, the other
 -- | direction.
 -- |
--- | ```purescript
 -- | encodeFoo :: EncodeJson Foo
 -- | encodeFoo = encodeFix \self -> encodeArray self
--- | ```
+-- | Uses `fromFn`, `runEncode`.
 encodeFix :: ∀ a. (EncodeJson a -> EncodeJson a) -> EncodeJson a
 encodeFix f = fromFn \a -> runEncode (f (encodeFix f)) a
 
