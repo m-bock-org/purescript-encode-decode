@@ -1,5 +1,5 @@
 bower_components/
-node_modules/
+node_modules
 .pulp-cache/
 output/
 output-es/
@@ -13,3 +13,17 @@ dep-docs/
 .spec-results
 .vscode/.toolchain
 .direnv/
+
+# What `nix build` leaves behind - a symlink into the store, not a
+# source, and one that has been committed by mistake before. No
+# trailing slash: it is a symlink, and `result/` would match only a
+# directory. `result-*` for the numbered ones a second build makes.
+result
+result-*
+
+# What the spago wrapper drops on its way past. A build timing and a
+# spec run are not sources, and a night that commits one has proposed
+# a change that fixes nothing. `.tmp*` rather than the one name it
+# writes today, and no trailing slash, so the next thing it drops is
+# covered whether it turns out to be a directory or a file.
+.tmp*
