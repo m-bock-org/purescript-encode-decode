@@ -90,19 +90,15 @@ decoder (JsonCodec c) = c.decode
 -- | reason the type is honest.
 -- | A codec defined in terms of itself, for a recursive type - the
 -- | pair of `Data.Json.Encode.encodeFix` and
--- | `Data.Json.Decode.decodeFix`, and the same shape as
--- | `Data.Codec.Argonaut.fix`.
 -- |
--- | ```purescript
 -- | codecFoo :: JsonCodec Foo
 -- | codecFoo = codecFix \self -> codecArray self
--- | ```
--- | `f (codecFix f)` must stay *inside* both lambdas. Lifting it into
 -- | a `let` above them reads as the obvious tidy-up and is an infinite
 -- | loop: the binding is forced as soon as `codecFix f` is evaluated,
 -- | before anything has a `Json` to work on. Written this way it is
 -- | only reached once an encode or a decode actually runs, which is
 -- | what stops the recursion.
+-- | Uses `codec`, `encoder`, `decoder`.
 codecFix :: ∀ a. (JsonCodec a -> JsonCodec a) -> JsonCodec a
 codecFix f = codec
   (Encode.fromFn \a -> Encode.runEncode (encoder $ f $ codecFix f) a)

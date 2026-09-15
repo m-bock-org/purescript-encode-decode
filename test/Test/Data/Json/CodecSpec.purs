@@ -56,10 +56,9 @@ instance Show Chain where
 type ChainParts = { head :: Maybe Int, tail :: Maybe Chain }
 
 -- | The recursive reference is `self`, bound by `codecFix`. Encoding
--- | `Nil` as absent fields rather than a tag keeps this a record codec
 -- | at every level, so what the fixed point re-enters is the same
 -- | shape each time.
--- | Private. Used only by `spec`. Uses `codecFix`.
+-- | Private. Uses `fromParts`, `toParts`.
 codecChain :: JsonCodec Chain
 codecChain = codecFix \self ->
   codecInvmap fromParts toParts

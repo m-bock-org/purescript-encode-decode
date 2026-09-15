@@ -65,16 +65,14 @@ instance Show Tree where
   show (Node n children) = "Node " <> show n <> " " <> show children
 
 -- | The recursive reference is `self`, bound by `encodeFix` - a bare
--- | `encodeArray encodeTree` inside `encodeTree` would be a
--- | `CycleInDeclaration`.
--- | Private. Used only by `spec`. Uses `encodeFix`.
+-- | Private.
 encodeTree :: EncodeJson Tree
 encodeTree = encodeFix \self -> E.encodeDispatch case _ of
   Node n children -> E.encoded
     (encodeRecord { value: encodeInt, children: encodeArray self })
     { value: n, children }
 
--- | Private. Used only by `spec`. Uses `decodeFix`.
+-- | Private.
 decodeTree :: DecodeJson Tree
 decodeTree = decodeFix \self ->
   map (\r -> Node r.value r.children)
