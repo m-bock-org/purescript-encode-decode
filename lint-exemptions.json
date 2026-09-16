@@ -1,5 +1,20 @@
 {
-  "exempt": [],
+  "exempt": [
+    {
+      "rule": "declaration-notes",
+      "modules": [
+        "*"
+      ],
+      "why": "DELETED UPSTREAM (lint-regulator#49). At this pin its fixer rewrites notes and drops the prose sharing a line with a generated sentence - nine sentences on each of two nights, including the codecFix infinite-loop warning and both of its worked examples. `exempt` rather than `pending` because the fixer runs with ByDesignOnly and does not honour `pending`. Delete when the regulator pin moves."
+    },
+    {
+      "rule": "comment-policy",
+      "modules": [
+        "*"
+      ],
+      "why": "STOPPED REWRITING UPSTREAM (lint-regulator#38). At this pin its relocator moves prose to the trailing block a line at a time and loses whatever shared a line with a generated note. `exempt` rather than `pending` for the same reason. Delete when the regulator pin moves."
+    }
+  ],
   "pending": [
     {
       "rule": "max-do-nesting-depth",
