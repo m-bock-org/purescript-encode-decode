@@ -1,4 +1,4 @@
-# CI, on gaia.
+# CI, on star.
 #
 # One job, one command, and the command is nix. What a pull request must
 # pass is `nix flake check` - the same derivations, built the same way,
@@ -8,13 +8,35 @@
 #
 # This file is meant to be identical in every repository. If a repo
 # needs something else checked, that belongs in its flake as another
-# check, not as another step here.
+# check, not as another step here. **This one is not identical, and
+# the paragraph below is why.**
 #
-# `runs-on: gaia` rather than a hosted runner, because gaia already has
-# the nix store this repository builds against and the key its private
-# flake inputs are fetched with. A hosted runner has neither: it spent
-# every run compiling the package set from source, several hundred
-# modules, before reaching the first line of this repository's code.
+# A self-hosted runner rather than a hosted one, because ours already
+# have the nix store this repository builds against and the key its
+# private flake inputs are fetched with. A hosted runner has neither:
+# it spent every run compiling the package set from source, several
+# hundred modules, before reaching the first line of this
+# repository's code.
+#
+# **star rather than gaia, because gaia cannot verify GitHub's host
+# key.** Any `git+ssh://` flake input whose rev is not already in
+# gaia's store dies there:
+#
+#     Host key verification failed.
+#     error: Failed to fetch git repository
+#            'ssh://git@github.com/m-bock-org/al-dente'
+#
+# Reproducibly, on two runs of #14, which changes no inputs at all.
+# What makes it hard to see is that a repository whose revs are still
+# cached passes: lint-regulator was green the same hour on the same
+# al-dente input, and this repository's own main was green on
+# 2026-09-16, before the store lost the rev. star fetched panel's
+# minutes-old rev over ssh at 18:28 the same day and succeeded - it
+# got its own key on 2026-09-18, and gaia's `known_hosts` never did.
+#
+# So this is a workaround for a machine, not a property of this
+# repository, and it comes back to gaia - and to the shared wording
+# above - when gaia can fetch again.
 name: check
 
 on:
@@ -30,14 +52,18 @@ concurrency:
 
 jobs:
   check:
-    runs-on: [ self-hosted, gaia ]
+    runs-on: [ self-hosted, star ]
     steps:
       - uses: actions/checkout@v4
 
       # One repository builds at a time across all of them. GitHub's
       # `concurrency` is per-repository, so without this the machine
-      # can take a compile from every repository at once - and it has
-      # 3.8G, which is one purs and no second one. The lock is held for
-      # the build, not the queue, so waiting costs a listener and not
+      # can take a compile from every repository at once, and neither
+      # box has the memory for two `purs`. The lock is held for the
+      # build, not the queue, so waiting costs a listener and not
       # memory.
-      - run: flock -w 3600 /tmp/gaia-ci.lock nix flake check -L
+      #
+      # `/tmp/ci.lock` is the name star's other job uses - infra's
+      # check - rather than gaia's `/tmp/gaia-ci.lock`, which on star
+      # would be a lock nothing else holds.
+      - run: flock -w 3600 /tmp/ci.lock nix flake check -L
