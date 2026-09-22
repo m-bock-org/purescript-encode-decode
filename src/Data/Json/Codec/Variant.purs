@@ -35,12 +35,7 @@ import Prim.RowList (class RowToList)
 codecVariant :: ∀ rcs ro. CodecVariant rcs ro => Record rcs -> JsonCodec (Variant ro)
 codecVariant = codecVariantWith variantEncoding
 
-codecVariantWith
-  :: ∀ rcs ro
-   . CodecVariant rcs ro
-  => Encoding
-  -> Record rcs
-  -> JsonCodec (Variant ro)
+codecVariantWith :: ∀ rcs ro. CodecVariant rcs ro => Encoding -> Record rcs -> JsonCodec (Variant ro)
 codecVariantWith = codecVariantHalves
 
 -- | What a record of per-case codecs has to satisfy.

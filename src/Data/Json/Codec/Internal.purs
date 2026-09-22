@@ -85,11 +85,15 @@ instance
   ) =>
   SplitCodecs (RL.Cons sym c rl) rcs res rds where
   splitEncoders rcs =
-    Record.insert (Proxy @sym)
-      (splitEncoder (Record.get (Proxy @sym) rcs))
-      (splitEncoders @rl (Record.delete (Proxy @sym) rcs))
+    let
+      value = splitEncoder (Record.get (Proxy @sym) rcs)
+      remainder = splitEncoders @rl (Record.delete (Proxy @sym) rcs)
+    in
+      Record.insert (Proxy @sym) value remainder
 
   splitDecoders rcs =
-    Record.insert (Proxy @sym)
-      (splitDecoder (Record.get (Proxy @sym) rcs))
-      (splitDecoders @rl (Record.delete (Proxy @sym) rcs))
+    let
+      value = splitDecoder (Record.get (Proxy @sym) rcs)
+      remainder = splitDecoders @rl (Record.delete (Proxy @sym) rcs)
+    in
+      Record.insert (Proxy @sym) value remainder
