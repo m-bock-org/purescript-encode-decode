@@ -20,6 +20,7 @@ import Data.Json.Codec
   )
 import Data.Json.Codec.Record (codecOptional, codecRecord)
 import Data.Json.Codec.Sum (codecEnum, codecSum, codecSumWith)
+import Data.Json.Codec.Variant (codecEnum, codecEnumWith) as CodecVariant
 import Data.Json.Codec.Variant (codecVariant)
 import Data.Variant (Variant)
 import Data.Variant as V
@@ -35,6 +36,7 @@ import Data.Json.Encode (encodeArray, encodeInt, encodeMaybe, encodeString, runE
 import Data.Json.Encode.Record (encodeRecord)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap, wrap)
+import Data.String (toUpper) as Str
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual, shouldSatisfy)
 
@@ -165,6 +167,18 @@ codecMsg = codecVariant
   , note: codecString
   }
 
+type Phase = Variant (design :: {}, convention :: {}, polish :: {})
+
+-- | A variant whose cases carry nothing, so the tag is the whole of it.
+-- | Private.
+codecPhase :: JsonCodec Phase
+codecPhase = CodecVariant.codecEnum
+
+-- | The same row, with the word on the wire spelled another way.
+-- | Private.
+codecShouted :: JsonCodec Phase
+codecShouted = CodecVariant.codecEnumWith Str.toUpper
+
 -- | Uses `roundTrip`, `encodingWith`.
 spec :: Spec Unit
 spec = do
@@ -267,6 +281,35 @@ spec = do
     it "round-trips an all-nullary type as a plain string" do
       roundTrip codecMode Simulation `shouldEqual` Right Simulation
       runDecodeFromString (decoder codecMode) "\"Realisation\"" `shouldEqual` Right Realisation
+
+    it "round-trips a payload-free variant, every case" do
+      roundTrip codecPhase (V.inj (Proxy @"design") {})
+        `shouldEqual` Right (V.inj (Proxy @"design") {})
+      roundTrip codecPhase (V.inj (Proxy @"convention") {})
+        `shouldEqual` Right (V.inj (Proxy @"convention") {})
+      roundTrip codecPhase (V.inj (Proxy @"polish") {})
+        `shouldEqual` Right (V.inj (Proxy @"polish") {})
+
+    it "writes a payload-free variant as the label alone, with no envelope" do
+      runEncodeToString (encoder codecPhase) (V.inj (Proxy @"polish") {})
+        `shouldEqual` "\"polish\""
+
+    it "reads the label alone" do
+      runDecodeFromString (decoder codecPhase) "\"convention\""
+        `shouldEqual` Right (V.inj (Proxy @"convention") {})
+
+    it "refuses a word that is not one of the cases" do
+      runDecodeFromString (decoder codecPhase) "\"pollish\"" `shouldSatisfy` Either.isLeft
+
+    it "refuses a tagged object, which is what the other variant codec writes" do
+      runDecodeFromString (decoder codecPhase) """{"tag":"polish"}""" `shouldSatisfy` Either.isLeft
+
+    it "spells the wire word through the rewrite, both ways" do
+      runEncodeToString (encoder codecShouted) (V.inj (Proxy @"design") {})
+        `shouldEqual` "\"DESIGN\""
+      roundTrip codecShouted (V.inj (Proxy @"design") {})
+        `shouldEqual` Right (V.inj (Proxy @"design") {})
+      runDecodeFromString (decoder codecShouted) "\"design\"" `shouldSatisfy` Either.isLeft
 
 -- | Private. Used only by `spec`.
 encodingWith :: String -> Encoding
