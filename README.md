@@ -72,6 +72,20 @@ codecUser = codecRecord
 mirror the modules of the same name, and `codecInvmap`/`codecRefine` move a codec
 to another type - a codec is invariant, so neither `map` nor `>$<` can
 be written for it, and two functions is what honesty costs.
+`codecRefineMaybe` is `codecRefine` for a parse that can miss, saying
+once what was expected.
+
+**Numbers that must not round.** `parseKeepingNumbers` reads a document
+keeping each number as the text it was written as, and
+`codecNumberText` takes that text and writes it back verbatim with
+`JSON.rawJSON`. `0.00104800` stays `0.00104800`, and
+`0.1000000000000000055` keeps digits a double cannot hold. This is for
+money from an API that sends it as JSON numbers. It needs Node 21 or a
+current browser.
+
+**A Variant enum in another API's spelling.** `codecEnumWith snakeCase`
+reads and writes `pendingNew` as `pending_new`. Both directions come
+from one rewrite.
 
 **When to reach for it.** A format with no history - something this
 program writes and this program reads, where "correct" means a round

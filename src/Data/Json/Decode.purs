@@ -39,6 +39,7 @@ module Data.Json.Decode
   , decodeMapFromObject
   , decodeTupleArrayFromObject
   , jsonParser
+  , parseKeepingNumbers
   ) where
 
 import Prelude
@@ -49,6 +50,7 @@ import Data.Argonaut.Decode.Decoders as Decoders
 import Data.Argonaut.Decode.Error (JsonDecodeError(..), printJsonDecodeError)
 import Data.Argonaut.Parser (jsonParser) as Parser
 import Data.Bifunctor (lmap)
+import Data.Function.Uncurried (Fn3, runFn3)
 import Data.Either (Either(..))
 import Data.Map (Map)
 import Data.Maybe (Maybe(..))
@@ -300,6 +302,17 @@ decodeTupleArrayFromObject decodeK decodeV = do
 -- | the decoders above can run.
 jsonParser :: String -> Either String Json
 jsonParser = Parser.jsonParser
+
+-- | Parse, keeping every number as the text it was written as:
+-- | `{"qty":0.00104800}` reads as `{"qty":"0.00104800"}`, for
+-- | `Data.Json.Codec.codecNumberText` to take. A runtime that cannot give
+-- | `JSON.parse` a number's source text (older than Node 21) refuses the
+-- | document rather than rounding it.
+parseKeepingNumbers :: String -> Either String Json
+parseKeepingNumbers raw = runFn3 parseKeepingNumbersImpl Left Right raw
+
+foreign import parseKeepingNumbersImpl
+  :: Fn3 (String -> Either String Json) (Json -> Either String Json) String (Either String Json)
 --
 -- `decodeMapFromObject`
 -- --------------------------------------------------------------------------------------------------

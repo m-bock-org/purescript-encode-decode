@@ -31,10 +31,12 @@ module Data.Json.Codec
   , codecFix
   , codecInvmap
   , codecRefine
+  , codecRefineMaybe
   , codecNamed
   , codecRawJson
   , codecString
   , codecNumber
+  , codecNumberText
   , codecInt
   , codecBoolean
   , codecArray
@@ -45,6 +47,7 @@ module Data.Json.Codec
 
 import Prelude
 
+import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Functor.Contravariant ((>$<))
 import Data.Json.Decode (DecodeJson, JsonDecodeError)
@@ -52,7 +55,11 @@ import Data.Json.Decode as Decode
 import Data.Json.Encode (EncodeJson, Json)
 import Data.Json.Encode as Encode
 import Data.Map (Map)
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..))
+import Data.String.Regex (Regex)
+import Data.String.Regex (test) as Regex
+import Data.String.Regex.Flags (noFlags) as Regex
+import Data.String.Regex.Unsafe (unsafeRegex) as Regex
 import Foreign.Object (Object)
 
 -- | An encoder and a decoder for the same type, kept together.
@@ -122,6 +129,51 @@ codecRefine
   -> JsonCodec b
 codecRefine narrow widen (JsonCodec c) =
   JsonCodec { encode: widen >$< c.encode, decode: Decode.decodeRefine narrow c.decode }
+
+-- | `codecRefine` for the common narrowing: a parse that can miss, and
+-- | what was expected, said once. `codecRefineMaybe "a port" fromInt toInt
+-- | codecInt` refuses `-1` as `expected a port`.
+-- | Uses `codecRefine`.
+codecRefineMaybe
+  :: ∀ a b
+   . String
+  -> (a -> Maybe b)
+  -> (b -> a)
+  -> JsonCodec a
+  -> JsonCodec b
+codecRefineMaybe expected narrow = codecRefine \held -> case narrow held of
+  Nothing -> Left (Decode.TypeMismatch ("expected " <> expected))
+  Just narrowed -> Right narrowed
+
+-- | A JSON number as its exact text: `"0.00104800"` for `0.00104800`.
+-- |
+-- | Written back verbatim - trailing zeros, every place - with
+-- | `JSON.rawJSON`. Read from the text a number was written as, which is
+-- | what `Data.Json.Decode.parseKeepingNumbers` hands over; a document
+-- | parsed the ordinary way has already turned its numbers into doubles,
+-- | and those are refused here rather than printed back as digits they
+-- | may never have had. For money and anything else that must not round.
+-- | Needs Node 21 or a current browser, for `JSON.rawJSON`.
+codecNumberText :: JsonCodec String
+codecNumberText = codecRefine numberTextOf rawNumberImpl codecRawJson
+
+-- | The text of a number read by `parseKeepingNumbers`, or why it is not one.
+numberTextOf :: Json -> Either JsonDecodeError String
+numberTextOf json = do
+  text <- lmap (const notKept) (Decode.runDecode Decode.decodeString json)
+
+  if Regex.test numberLiteral text then Right text
+  else Left (Decode.TypeMismatch ("a JSON number's text, got " <> text))
+
+-- | Why a number that arrived as a number cannot be read as its text.
+notKept :: JsonDecodeError
+notKept = Decode.TypeMismatch "a number read with its text kept - parse with parseKeepingNumbers"
+
+-- | What JSON calls a number, and nothing else.
+numberLiteral :: Regex
+numberLiteral = Regex.unsafeRegex "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?$" Regex.noFlags
+
+foreign import rawNumberImpl :: String -> Json
 
 -- | Name a codec, so a decode failure says which thing failed to read.
 -- |

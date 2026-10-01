@@ -7,12 +7,14 @@ module Data.Json.Sum.Encoding
   , defaultEncoding
   , variantEncoding
   , lowerFirst
+  , snakeCase
   ) where
 
 import Prelude
 
 import Data.Maybe (Maybe(..))
-import Data.String.CodeUnits (singleton, uncons) as Str
+import Data.Array (concatMap) as Array
+import Data.String.CodeUnits (fromCharArray, singleton, toCharArray, uncons) as Str
 import Data.String.Common (toLower) as Str
 
 -- | `EncodeTagged` puts the constructor name and its payload under two
@@ -72,6 +74,22 @@ variantEncoding = EncodeTagged
 
 -- | Lowercases the first character only - `"TradeTick"` becomes
 -- | in camelCase.
+-- | A label as an API spelled in snake case writes it: `pendingNew` is
+-- | `pending_new`, `trade` is `trade`. For `codecEnumWith`, so a Variant's
+-- | labels stay PureScript's and the wire stays the API's.
+snakeCase :: String -> String
+snakeCase label = Str.fromCharArray (Array.concatMap underscored (Str.toCharArray label))
+
+-- | A character as snake case writes it: a capital becomes `_` and its lower case.
+underscored :: Char -> Array Char
+underscored c = do
+  let
+    lower :: String
+    lower = Str.toLower (Str.singleton c)
+
+  if Str.singleton c /= lower then [ '_' ] <> Str.toCharArray lower
+  else [ c ]
+
 lowerFirst :: String -> String
 lowerFirst s = case Str.uncons s of
   Nothing -> s
