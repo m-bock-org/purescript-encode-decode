@@ -4,7 +4,7 @@ import Prelude
 
 import Effect (Effect)
 import Test.Data.Json.CodecSpec as Data.Json.CodecSpec
-import Test.Data.Json.RefineSpec as Data.Json.RefineSpec
+import Test.Data.Json.SnakeCaseSpec as Data.Json.SnakeCaseSpec
 import Test.Data.Json.RecordSpec as Data.Json.RecordSpec
 import Test.Data.Json.SumSpec as Data.Json.SumSpec
 import Test.Data.JsonSpec as Data.JsonSpec
@@ -18,4 +18,4 @@ main =
     Data.Json.RecordSpec.spec
     Data.Json.SumSpec.spec
     Data.Json.CodecSpec.spec
-    Data.Json.RefineSpec.spec
+    Data.Json.SnakeCaseSpec.spec

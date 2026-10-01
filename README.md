@@ -72,9 +72,6 @@ codecUser = codecRecord
 mirror the modules of the same name, and `codecInvmap`/`codecRefine` move a codec
 to another type - a codec is invariant, so neither `map` nor `>$<` can
 be written for it, and two functions is what honesty costs.
-`codecRefineMaybe` is `codecRefine` for a parse that can miss, saying
-once what was expected.
-
 **A Variant enum in another API's spelling.** `codecEnumWith snakeCase`
 reads and writes `pendingNew` as `pending_new`. Both directions come
 from one rewrite.

@@ -31,7 +31,6 @@ module Data.Json.Codec
   , codecFix
   , codecInvmap
   , codecRefine
-  , codecRefineMaybe
   , codecNamed
   , codecRawJson
   , codecString
@@ -53,7 +52,7 @@ import Data.Json.Decode as Decode
 import Data.Json.Encode (EncodeJson, Json)
 import Data.Json.Encode as Encode
 import Data.Map (Map)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
 import Foreign.Object (Object)
 
 -- | An encoder and a decoder for the same type, kept together.
@@ -123,21 +122,6 @@ codecRefine
   -> JsonCodec b
 codecRefine narrow widen (JsonCodec c) =
   JsonCodec { encode: widen >$< c.encode, decode: Decode.decodeRefine narrow c.decode }
-
--- | `codecRefine` for the common narrowing: a parse that can miss, and
--- | what was expected, said once. `codecRefineMaybe "a port" fromInt toInt
--- | codecInt` refuses `-1` as `expected a port`.
--- | Uses `codecRefine`.
-codecRefineMaybe
-  :: ∀ a b
-   . String
-  -> (a -> Maybe b)
-  -> (b -> a)
-  -> JsonCodec a
-  -> JsonCodec b
-codecRefineMaybe expected narrow = codecRefine \held -> case narrow held of
-  Nothing -> Left (Decode.TypeMismatch ("expected " <> expected))
-  Just narrowed -> Right narrowed
 
 -- | Name a codec, so a decode failure says which thing failed to read.
 -- |
