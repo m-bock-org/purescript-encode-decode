@@ -12,7 +12,6 @@
             "either",
             "foldable-traversable",
             "foreign-object",
-            "functions",
             "heterogeneous",
             "maybe",
             "ordered-collections",
