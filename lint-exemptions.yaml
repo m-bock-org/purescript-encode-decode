@@ -1,0 +1,165 @@
+# What encode-decode is not in step with, and why.
+exemptions:
+  - rule: declaration-notes
+    modules:
+      - "*"
+    why: >-
+      DELETED UPSTREAM (lint-regulator#49). At this pin its fixer rewrites notes and drops the prose
+      sharing a line with a generated sentence - nine sentences on each of two nights, including the
+      codecFix infinite-loop warning and both of its worked examples. `exempt` rather than `pending`
+      because the fixer runs with ByDesignOnly and does not honour `pending`. Delete when the
+      regulator pin moves.
+    kind: by-design
+  - rule: comment-policy
+    modules:
+      - "*"
+    why: >-
+      STOPPED REWRITING UPSTREAM (lint-regulator#38). At this pin its relocator moves prose to the
+      trailing block a line at a time and loses whatever shared a line with a generated note.
+      `exempt` rather than `pending` for the same reason. Delete when the regulator pin moves.
+    kind: by-design
+  - rule: max-do-nesting-depth
+    modules:
+      - Test.Data.Json.RecordSpec
+      - Test.Data.Json.SumSpec
+      - Test.Data.JsonSpec
+    why: do blocks nested deeper than the max, wanting an intermediate binding.
+    kind: backlog
+  - rule: max-delimiter-run
+    modules:
+      - Data.Json.Codec.Internal
+      - Data.Json.Decode
+      - Data.Json.Decode.Sum
+      - Data.Json.Decode.Tuple
+      - Data.Json.Encode
+      - Data.Json.Encode.Sum
+      - Data.Json.Encode.Variant
+      - Test.Data.JsonSpec
+    why: expressions built inline where a `let` would name the inner part.
+    kind: backlog
+  - rule: encode-decode-signature
+    modules:
+      - Data.Json.Decode
+      - Data.Json.Decode.Record
+      - Data.Json.Decode.Sum
+      - Data.Json.Decode.Tuple
+      - Data.Json.Decode.Variant
+      - Data.Json.Encode
+      - Data.Json.Encode.Record
+      - Data.Json.Encode.Sum
+      - Data.Json.Encode.Tuple
+      - Data.Json.Encode.Variant
+      - Test.Data.Json.RecordSpec
+      - Test.Data.Json.SumSpec
+      - Test.Data.JsonSpec
+    why: a `decode`/`encode` name whose signature does not end with the type it names.
+    kind: backlog
+  - rule: single-line-signature
+    modules:
+      - Data.Json.Codec
+      - Data.Json.Codec.Variant
+      - Data.Json.Decode
+      - Data.Json.Decode.Record
+      - Data.Json.Decode.Sum
+      - Data.Json.Decode.Variant
+      - Data.Json.Encode
+      - Data.Json.Encode.Record
+      - Data.Json.Encode.Sum
+      - Data.Json.Encode.Variant
+    why: a signature spread over more lines than it needs.
+    kind: backlog
+  - rule: max-line-length
+    modules:
+      - Data.Json.Decode.Sum
+      - Data.Json.Encode.Sum
+      - Test.Data.Json.CodecSpec
+      - Test.Data.Json.RecordSpec
+      - Test.Data.JsonSpec
+    why: lines over the width limit.
+    kind: backlog
+  - rule: require-do-ado-notation
+    modules:
+      - Data.Json.Decode
+      - Data.Json.Decode.Sum
+      - Data.Json.Decode.Variant
+      - Test.Data.JsonSpec
+    why: binds chained with operators where `do` reads plainly.
+    kind: backlog
+  - rule: no-json-codec-escape
+    modules:
+      - Data.Json.Codec
+      - Data.Json.Decode.Record
+      - Data.Json.Decode.Sum
+      - Data.Json.Decode.Tuple
+      - Data.Json.Decode.Variant
+      - Data.Json.Encode.Record
+      - Data.Json.Encode.Sum
+      - Data.Json.Encode.Variant
+      - Test.Data.Json.RecordSpec
+    why: >-
+      a codec reaching `fromFn` rather than composing combinators - this library is where the
+      missing combinators would live, so these are the ones worth reading first.
+    kind: backlog
+  - rule: same-constructor-arm
+    modules:
+      - Data.Json.Decode
+      - Data.Json.Decode.Sum
+    why: case arms that build the same constructor and could share one.
+    kind: backlog
+  - rule: max-name-segments
+    modules:
+      - Data.Json.Decode
+      - Data.Json.Encode
+    why: names with more segments than the limit.
+    kind: backlog
+  - rule: max-block-nesting-depth
+    modules:
+      - Data.Json.Encode.Sum
+    why: blocks nested deeper than the max.
+    kind: backlog
+  - rule: no-where-clauses
+    modules:
+      - Data.Json.Decode.Sum
+      - Test.Data.Json.CodecSpec
+    why: a `where` clause, where this style uses `let`.
+    kind: backlog
+  - rule: case-arm-layout
+    modules:
+      - Data.Json.Decode.Sum
+    why: style debt.
+    kind: backlog
+  - rule: combinator-atoms
+    modules:
+      - Data.Json.Encode
+    why: style debt.
+    kind: backlog
+  - rule: guarded-constructor-branch
+    modules:
+      - Data.Json.Encode.Sum
+    why: style debt.
+    kind: backlog
+  - rule: no-stacked-maybe-either
+    modules:
+      - Data.Json.Decode.Sum
+    why: a `Maybe` wrapped around an `Either` or the reverse.
+    kind: backlog
+  - rule: no-stuttering-name
+    modules:
+      - Test.Data.JsonSpec
+    why: a name repeating its module or type.
+    kind: backlog
+  - rule: two-branch-guard
+    modules:
+      - Test.Data.JsonSpec
+    why: a guard with two branches, which is an if/else.
+    kind: backlog
+  - rule: comment-policy
+    modules:
+      - Data.Json.Decode
+      - Data.Json.Decode.Sum
+      - Data.Json.Encode
+      - Test.Data.Json.CodecSpec
+      - Test.Data.Json.SumSpec
+      - Test.Data.JsonSpec
+    why: style debt.
+    kind: backlog

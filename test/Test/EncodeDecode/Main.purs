@@ -1,4 +1,4 @@
-module Test.Main (main) where
+module Test.EncodeDecode.Main (main) where
 
 import Prelude
 

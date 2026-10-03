@@ -1,38 +1,31 @@
 package:
   name: encode-decode
   dependencies:
-    - argonaut-core
     - argonaut-codecs
+    - argonaut-core
     - arrays
+    - bifunctors
+    - contravariant
+    - control
     - either
     - foldable-traversable
     - foreign-object
+    - heterogeneous
     - maybe
     - ordered-collections
     - prelude
     - record
-    - heterogeneous
     - strings
     - tuples
     - variant
-    - contravariant
 
   test:
-    main: Test.Main
+    main: Test.EncodeDecode.Main
     dependencies:
-      - aff
       - effect
       - either
-      - lint-purs
       - maybe
-      - node-process
+      - newtype
       - spec
       - spec-node
       - tuples
-workspace:
-  packageSet:
-    registry: 78.0.0
-  extraPackages:
-    lint-purs:
-      git: https://github.com/m-bock/purescript-lint.git
-      ref: a047b117fe376b60402beb794da3cfae5366e994
