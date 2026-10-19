@@ -481,3 +481,18 @@ exemptions:
     why: >-
       A finding on 2026-10-19, when one-line-record-type-fields began asking for one member per
       line in a type synonym, an open tail counted. Not a decision: fix it and delete this line.
+  - rule: do-bind-layout
+    modules:
+      - Data.Json.Decode
+      - Data.Json.Decode.Sum
+      - Data.Json.Decode.Variant
+      - Test.Data.Json.CodecSpec
+      - Test.Data.Json.RecordSpec
+      - Test.Data.Json.SnakeCaseSpec
+      - Test.Data.Json.SumSpec
+      - Test.Data.JsonSpec
+    kind: backlog
+    since: "2026-10-19"
+    why: >-
+      A finding on 2026-10-19, when do-bind-layout began asking for a blank line around a
+      statement that spans lines. Not a decision: fix it and delete this line.
