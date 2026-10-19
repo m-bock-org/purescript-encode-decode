@@ -496,3 +496,21 @@ exemptions:
     why: >-
       A finding on 2026-10-19, when do-bind-layout began asking for a blank line around a
       statement that spans lines. Not a decision: fix it and delete this line.
+  - rule: no-qualified-type
+    modules:
+      - Data.Json.Codec.Internal
+      - Data.Json.Decode
+      - Data.Json.Decode.Record
+      - Data.Json.Decode.Sum
+      - Data.Json.Decode.Variant
+      - Data.Json.Encode
+      - Data.Json.Encode.Record
+      - Data.Json.Encode.Sum
+      - Data.Json.Encode.Variant
+      - Test.Data.JsonSpec
+    kind: backlog
+    since: "2026-10-19"
+    why: >-
+      33 findings in 10 modules, found when no-qualified-type was switched on: a type written
+      qualified, or listed in a qualified import. Not a decision: import each type bare, values
+      qualified, and delete this entry.
