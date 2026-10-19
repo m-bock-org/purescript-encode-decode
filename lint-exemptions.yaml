@@ -472,3 +472,12 @@ exemptions:
     why: >-
       114 findings in 21 modules, from the day the rule took on the whole import policy - values
       qualified, alias the last segment. Not a claim that the rule is wrong.
+  - rule: one-line-record-type-fields
+    modules:
+      - Test.Data.Json.CodecSpec
+      - Test.Data.Json.SnakeCaseSpec
+    kind: backlog
+    since: "2026-10-19"
+    why: >-
+      A finding on 2026-10-19, when one-line-record-type-fields began asking for one member per
+      line in a type synonym, an open tail counted. Not a decision: fix it and delete this line.
