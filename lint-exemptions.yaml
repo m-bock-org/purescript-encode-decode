@@ -528,3 +528,54 @@ exemptions:
       9 findings in 6 modules on 2026-10-19, when doc-comment-noun-phrase
       began refusing a doc comment that opens with a question word or `Returns`. Not a
       decision: name the thing, as a noun phrase, and delete this line.
+  - rule: mixed-operators
+    modules:
+      - Data.Json.Decode.Sum
+      - Test.Data.JsonSpec
+    kind: backlog
+    since: "2026-10-24"
+    why: >-
+      moved to default 2026-10-24; not fixed outside endpoint
+  - rule: no-qualified-import-list
+    modules:
+      - Data.Json.Decode
+      - Data.Json.Decode.Sum
+      - Data.Json.Decode.Tuple
+      - Data.Json.Encode.Sum
+      - Data.Json.Encode.Tuple
+      - Data.Json.Sum.Encoding
+      - Test.Data.Json.CodecSpec
+      - Test.Data.Json.RecordSpec
+      - Test.Data.Json.SnakeCaseSpec
+      - Test.Data.Json.SumSpec
+      - Test.Data.JsonSpec
+    kind: backlog
+    since: "2026-10-24"
+    why: >-
+      moved to default 2026-10-24; not fixed outside endpoint
+  - rule: no-show-outside-tests
+    modules:
+      - Data.Json.Decode.Tuple
+    kind: backlog
+    since: "2026-10-24"
+    why: >-
+      moved to default 2026-10-24; not fixed outside endpoint
+  - rule: one-let-per-binding
+    modules:
+      - Test.Data.Json.RecordSpec
+    kind: backlog
+    since: "2026-10-24"
+    why: >-
+      moved to default 2026-10-24; not fixed outside endpoint
+  - rule: one-line-import
+    modules:
+      - Data.Json.Codec.Variant
+      - Data.Json.Decode.Sum
+      - Data.Json.Decode.Tuple
+      - Data.Json.Encode.Sum
+      - Test.Data.Json.CodecSpec
+      - Test.Data.JsonSpec
+    kind: backlog
+    since: "2026-10-24"
+    why: >-
+      moved to default 2026-10-24; not fixed outside endpoint
